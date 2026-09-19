@@ -1,0 +1,24 @@
+# =======================================================
+# Konfigurasi Environment - Sistem Absensi Sekolah
+# Salin file ini menjadi .env sebelum menjalankan aplikasi:
+# Windows (PowerShell / CMD): copy env-example.txt .env
+# Linux / macOS:             cp env-example.txt .env
+# =======================================================
+
+# Port server HTTP web aplikasi
+PORT=3000
+
+# Kunci rahasia enkripsi sesi Express (ganti dengan string acak unik)
+SESSION_SECRET=absensi-sekolah-secret-key-2026-xyz
+
+# Mode lingkungan aplikasi (development / production)
+NODE_ENV=development
+
+# Lokasi file database SQLite WAL
+DB_PATH=./data/database.sqlite
+
+# Folder penyimpanan sesi kredensial login WhatsApp Baileys
+AUTH_FOLDER=./data/baileys_auth
+
+# Folder penyimpanan berkas unggahan (foto siswa, logo, foto pimpinan, galeri)
+UPLOAD_FOLDER=./data/uploads

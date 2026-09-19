@@ -142,13 +142,28 @@ cd website-absen-sekolah
 npm install
 ```
 
-### 3. Inisialisasi Database & Data Awal (Seeding)
+### 3. Konfigurasi File Environment (`.env`)
+Buat file konfigurasi `.env` dengan menyalin template dari `env-example.txt`:
+
+* **Windows (PowerShell / Command Prompt)**:
+  ```cmd
+  copy env-example.txt .env
+  ```
+* **Linux / macOS**:
+  ```bash
+  cp env-example.txt .env
+  ```
+
+> [!NOTE]
+> Buka file `.env` jika Anda ingin menyesuaikan nomor `PORT` (default: `3000`), `SESSION_SECRET`, atau lokasi penyimpanan folder data.
+
+### 4. Inisialisasi Database & Data Awal (Seeding)
 Jalankan perintah berikut untuk membuat struktur database SQLite WAL dan mengisi data awal (pengaturan sekolah, akun demo, data kelas, data siswa, dan contoh galeri):
 ```bash
 npm run seed
 ```
 
-### 4. Menjalankan Server Aplikasi
+### 5. Menjalankan Server Aplikasi
 * **Mode Standar (Produksi)**:
   ```bash
   npm start
@@ -240,6 +255,7 @@ website-absen-sekolah/
 │   │   ├── kiosk.js          # Rute layar kiosk scanner gerbang & API scan
 │   │   ├── landing.js        # Rute halaman depan & pencarian mandiri wali murid
 │   │   ├── students.js       # Rute CRUD data siswa & impor Excel
+│   │   ├── teachers.js       # Rute manajemen data guru & wali kelas binaan
 │   │   └── whatsapp.js       # Rute monitoring & kontrol sesi WhatsApp
 │   ├── services/
 │   │   ├── idcard.js         # Generator QR Code presisi tinggi kartu CR80
@@ -251,6 +267,8 @@ website-absen-sekolah/
 │   │   ├── landing.ejs       # Template website profil sekolah & cek mandiri
 │   │   └── login.ejs         # Template formulir login
 │   └── server.js             # Titik masuk utama aplikasi Express.js
+├── env-example.txt           # Template variabel konfigurasi environment
+├── .env                      # File konfigurasi aktif (disalin dari env-example.txt)
 ├── package.json              # Definisi dependensi & skrip npm
 └── README.md                 # Dokumentasi panduan proyek
 ```
