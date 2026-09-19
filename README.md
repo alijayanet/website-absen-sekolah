@@ -164,7 +164,7 @@ npm run seed
 ```
 
 ### 5. Menjalankan Server Aplikasi
-* **Mode Standar (Produksi)**:
+* **Mode Standar (Foreground)**:
   ```bash
   npm start
   ```
@@ -172,6 +172,47 @@ npm run seed
   ```bash
   npm run dev
   ```
+
+#### 🚀 Mode Background / Daemon dengan PM2 (Tetap Berjalan Saat Console Ditutup)
+Agar aplikasi dapat berjalan terus-menerus di latar belakang (*background service*) tanpa perlu membiarkan jendela Command Prompt / Terminal terbuka, gunakan **PM2**:
+
+1. **Instal PM2 secara Global** *(hanya perlu sekali saja)*:
+   ```bash
+   npm install -g pm2
+   ```
+
+2. **Jalankan Aplikasi di Background**:
+   ```bash
+   npm run pm2:start
+   # atau perintah langsung:
+   pm2 start ecosystem.config.js
+   ```
+   > [!NOTE]
+   > Setelah perintah di atas dijalankan, **jendela console/terminal dapat langsung ditutup**. Server aplikasi akan tetap aktif melayani presensi dan WhatsApp di background!
+
+3. **Perintah Manajemen PM2 (Cheat Sheet)**:
+   | Perintah | Fungsi / Keterangan |
+   |---|---|
+   | `npm run pm2:status` *(atau `pm2 status`)* | Menampilkan status server, penggunaan memori (RAM), & CPU |
+   | `npm run pm2:logs` *(atau `pm2 logs absensi-sekolah`)* | Melihat live output log server & pesan WhatsApp |
+   | `npm run pm2:restart` *(atau `pm2 restart absensi-sekolah`)* | Me-restart ulang server aplikasi secara instan |
+   | `npm run pm2:stop` *(atau `pm2 stop absensi-sekolah`)* | Menghentikan server aplikasi |
+
+4. **Jalankan Otomatis Saat Komputer / Server Menyala (Auto-Start on Boot)**:
+   * **Untuk Windows Server / Desktop**:
+     Buka PowerShell sebagai Administrator, lalu jalankan:
+     ```powershell
+     npm install -g pm2-windows-startup
+     pm2-startup install
+     pm2 save
+     ```
+   * **Untuk Linux / VPS (Ubuntu, Debian, CentOS)**:
+     ```bash
+     pm2 startup
+     # Salin & jalankan perintah sudo env PATH... yang dimunculkan di terminal, kemudian:
+     pm2 save
+     ```
+
 
 Aplikasi siap diakses melalui browser di alamat:
 👉 **`http://localhost:3000`** atau **`http://127.0.0.1:3000`**
@@ -269,6 +310,7 @@ website-absen-sekolah/
 │   └── server.js             # Titik masuk utama aplikasi Express.js
 ├── env-example.txt           # Template variabel konfigurasi environment
 ├── .env                      # File konfigurasi aktif (disalin dari env-example.txt)
+├── ecosystem.config.js       # Konfigurasi proses background PM2
 ├── package.json              # Definisi dependensi & skrip npm
 └── README.md                 # Dokumentasi panduan proyek
 ```
