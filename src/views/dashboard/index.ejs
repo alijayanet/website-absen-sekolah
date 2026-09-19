@@ -1,0 +1,299 @@
+<%- include('../partials/header', { title: 'Ringkasan Dashboard', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <!-- Sidebar -->
+  <%- include('sidebar') %>
+
+  <!-- Main Content -->
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Topbar Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">Ringkasan Presensi</h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">
+            <%= new Date(today).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) %>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <a href="/kiosk" target="_blank" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition" title="Buka Layar Kiosk Scanner">
+          <i data-lucide="scan" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Layar Kiosk</span>
+        </a>
+        <button onclick="triggerBroadcastAlpa()" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-semibold transition" title="Kirim Notifikasi Siswa Belum Hadir (Alpa)">
+          <i data-lucide="send" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Kirim Alpa</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl">
+      <% if (currentUser && currentUser.role === 'guru') { %>
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center shrink-0">
+              <i data-lucide="graduation-cap" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base font-bold">Selamat Datang, <%= currentUser.name %>!</h2>
+                <span class="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-semibold tracking-wide uppercase">Wali Kelas</span>
+              </div>
+              <p class="text-xs text-blue-100 mt-0.5">
+                <% if (currentUser.class_name) { %>
+                  Anda mengelola presensi siswa kelas <strong><%= currentUser.class_name %></strong>.
+                <% } else { %>
+                  <span class="text-amber-200">Akun Anda belum ditugaskan ke kelas manapun. Hubungi Administrator.</span>
+                <% } %>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <a href="/dashboard/students" class="w-full sm:w-auto text-center px-3.5 py-2 rounded-xl bg-white text-blue-700 text-xs font-bold hover:bg-blue-50 transition shadow-sm">
+              Kelola Siswa <%= currentUser.class_name || '' %>
+            </a>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- 5 Stat Metric Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Total Siswa -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between text-slate-400">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Siswa</span>
+            <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+          </div>
+          <div class="mt-3">
+            <span class="text-3xl font-extrabold text-slate-900"><%= metrics.totalStudents %></span>
+            <span class="text-xs text-slate-400 ml-1">Siswa Aktif</span>
+          </div>
+        </div>
+
+        <!-- Hadir Tepat Waktu -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between text-emerald-500">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Tepat Waktu</span>
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600"></i>
+          </div>
+          <div class="mt-3">
+            <span class="text-3xl font-extrabold text-emerald-600"><%= metrics.hadir %></span>
+            <span class="text-xs text-slate-400 ml-1">Siswa</span>
+          </div>
+        </div>
+
+        <!-- Terlambat -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between text-amber-500">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Terlambat</span>
+            <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i>
+          </div>
+          <div class="mt-3">
+            <span class="text-3xl font-extrabold text-amber-600"><%= metrics.terlambat %></span>
+            <span class="text-xs text-slate-400 ml-1">Siswa</span>
+          </div>
+        </div>
+
+        <!-- Izin & Sakit -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div class="flex items-center justify-between text-sky-500">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Izin / Sakit</span>
+            <i data-lucide="file-text" class="w-5 h-5 text-sky-600"></i>
+          </div>
+          <div class="mt-3">
+            <span class="text-3xl font-extrabold text-sky-600"><%= metrics.izin + metrics.sakit %></span>
+            <span class="text-xs text-slate-400 ml-1">Siswa</span>
+          </div>
+        </div>
+
+        <!-- Belum Hadir / Alpa -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between col-span-2 lg:col-span-1">
+          <div class="flex items-center justify-between text-rose-500">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Belum Hadir</span>
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600"></i>
+          </div>
+          <div class="mt-3">
+            <span class="text-3xl font-extrabold text-rose-600"><%= metrics.belumHadir %></span>
+            <span class="text-xs text-slate-400 ml-1">Siswa</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Persentase Bar & Status Gateway -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Progress Persentase Kehadiran -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="font-bold text-slate-800 text-sm">Tingkat Kehadiran Sekolah Hari Ini</h3>
+              <p class="text-xs text-slate-500">Total masuk (tepat waktu + terlambat) terhadap seluruh siswa</p>
+            </div>
+            <span class="text-2xl font-extrabold text-blue-600"><%= metrics.persentase %>%</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-3 mt-4 overflow-hidden">
+            <div class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: <%= metrics.persentase %>%"></div>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-6 text-xs text-slate-500">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Tepat Waktu: <strong class="text-slate-700"><%= metrics.hadir %></strong>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Terlambat: <strong class="text-slate-700"><%= metrics.terlambat %></strong>
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Belum Scan: <strong class="text-slate-700"><%= metrics.belumHadir %></strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- Status WhatsApp Gateway & Verifikasi -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <i data-lucide="message-square" class="w-4 h-4 text-emerald-600"></i>
+                Gateway WhatsApp
+              </h3>
+              <% if (waStatus.status === 'connected') { %>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Terhubung
+                </span>
+              <% } else if (waStatus.status === 'qr_ready') { %>
+                <a href="/dashboard/whatsapp" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Scan QR Ready
+                </a>
+              <% } else { %>
+                <a href="/dashboard/whatsapp" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Terputus
+                </a>
+              <% } %>
+            </div>
+
+            <div class="space-y-2 text-xs pt-1">
+              <div class="flex justify-between text-slate-500">
+                <span>Antrean Pending:</span>
+                <span class="font-mono font-bold text-slate-800"><%= queueStats.pending || 0 %> pesan</span>
+              </div>
+              <div class="flex justify-between text-slate-500">
+                <span>Pesan Terkirim:</span>
+                <span class="font-mono font-bold text-emerald-600"><%= queueStats.sent || 0 %> pesan</span>
+              </div>
+              <div class="flex justify-between text-slate-500">
+                <span>Wali Terverifikasi ('YA'):</span>
+                <span class="font-mono font-bold text-blue-600"><%= waVerificationStats.confirmed || 0 %> nomor</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+            <a href="/dashboard/whatsapp" class="text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1">
+              <span>Kelola Koneksi WA</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feed Aktivitas Presensi Terakhir -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-slate-800 text-sm">Aktivitas Presensi Terbaru</h3>
+            <p class="text-xs text-slate-500">10 log presensi siswa terakhir hari ini</p>
+          </div>
+          <a href="/dashboard/attendances" class="text-xs font-semibold text-blue-600 hover:text-blue-800">
+            Lihat Semua Rekap &rarr;
+          </a>
+        </div>
+
+        <% if (recentLogs.length === 0) { %>
+          <div class="p-8 text-center text-slate-400 text-sm">
+            Belum ada siswa yang melakukan presensi hari ini. Buka Layar Kiosk untuk memulai scan.
+          </div>
+        <% } else { %>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                  <th class="px-6 py-3">Siswa</th>
+                  <th class="px-6 py-3">Kelas</th>
+                  <th class="px-6 py-3">Jam Masuk</th>
+                  <th class="px-6 py-3">Status</th>
+                  <th class="px-6 py-3">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <% recentLogs.forEach(log => { %>
+                  <tr class="hover:bg-slate-50/50 transition">
+                    <td class="px-6 py-3 font-semibold text-slate-900 flex items-center gap-3">
+                      <% if (log.photo) { %>
+                        <img src="<%= log.photo %>" class="w-7 h-7 rounded-lg object-cover">
+                      <% } else { %>
+                        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
+                          <%= log.student_name.charAt(0) %>
+                        </div>
+                      <% } %>
+                      <span><%= log.student_name %></span>
+                    </td>
+                    <td class="px-6 py-3 text-slate-600 font-medium">
+                      <%= log.class_name || '-' %>
+                    </td>
+                    <td class="px-6 py-3 font-mono text-slate-600">
+                      <%= log.time_in %> WIB
+                    </td>
+                    <td class="px-6 py-3">
+                      <% if (log.status === 'HADIR') { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          HADIR
+                        </span>
+                      <% } else if (log.status === 'TERLAMBAT') { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+                          TELAT (<%= log.late_minutes %>m)
+                        </span>
+                      <% } else { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold text-[10px] bg-slate-100 text-slate-700 border border-slate-300">
+                          <%= log.status %>
+                        </span>
+                      <% } %>
+                    </td>
+                    <td class="px-6 py-3 text-slate-500">
+                      <%= log.notes || '-' %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  async function triggerBroadcastAlpa() {
+    if (!confirm('Apakah Anda yakin ingin mengirimkan pesan WhatsApp pemberitahuan Belum Hadir kepada seluruh wali murid yang siswanya belum absen hari ini?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/dashboard/attendances/broadcast-alpa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      alert(data.message);
+      location.reload();
+    } catch (e) {
+      alert('Gagal mengirim broadcast: ' + e.message);
+    }
+  }
+</script>
+
+<%- include('../partials/footer', { isDashboard: true }) %>

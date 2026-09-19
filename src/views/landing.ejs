@@ -1,0 +1,733 @@
+<%- include('partials/header', { title: 'Website Resmi & Portal Kehadiran' }) %>
+
+<!-- Top Info Bar -->
+<div class="bg-slate-900 text-slate-300 text-xs py-2 px-4 border-b border-slate-800">
+  <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+    <div class="flex items-center gap-4 text-[11px]">
+      <span class="flex items-center gap-1.5">
+        <i data-lucide="clock" class="w-3.5 h-3.5 text-blue-400"></i>
+        <span>Jam Masuk: <strong class="text-white"><%= settings.jam_masuk || '07:00' %> WIB</strong></span>
+      </span>
+      <span class="hidden md:flex items-center gap-1.5">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+        <span><%= settings.school_accreditation || 'Terakreditasi A (Unggul)' %></span>
+      </span>
+    </div>
+
+    <div class="flex items-center gap-4 text-[11px]">
+      <span class="flex items-center gap-1.5">
+        <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i>
+        <span><%= settings.school_phone || '-' %></span>
+      </span>
+      <span class="hidden sm:flex items-center gap-1.5">
+        <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i>
+        <span><%= settings.school_email || '-' %></span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Main Navbar -->
+<nav class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <!-- Brand -->
+    <a href="/" class="flex items-center gap-3">
+      <% if (settings.school_logo) { %>
+        <img src="<%= settings.school_logo %>" alt="Logo" class="w-12 h-12 object-contain rounded-xl shadow-sm">
+      <% } else { %>
+        <div class="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xl shadow-sm">
+          <%= (settings.school_name || 'S').charAt(0) %>
+        </div>
+      <% } %>
+      <div>
+        <h1 class="font-extrabold text-slate-900 text-base md:text-lg leading-tight"><%= settings.school_name || 'SMA Negeri 1 Prestasi' %></h1>
+        <p class="text-xs text-slate-500 font-medium">Unggul dalam Prestasi, Mulia dalam Karakter</p>
+      </div>
+    </a>
+
+    <!-- Navigation Links -->
+    <div class="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-600">
+      <a href="#beranda" class="hover:text-blue-600 transition">Beranda</a>
+      <a href="#cek-kehadiran" class="hover:text-blue-600 transition text-blue-600 font-bold">Cek Presensi</a>
+      <a href="#sambutan" class="hover:text-blue-600 transition">Sambutan</a>
+      <a href="#guru" class="hover:text-blue-600 transition">Guru & Staf</a>
+      <a href="#visi-misi" class="hover:text-blue-600 transition">Visi & Misi</a>
+      <a href="#program" class="hover:text-blue-600 transition">Program</a>
+      <a href="#galeri" class="hover:text-blue-600 transition">Galeri</a>
+      <a href="#pengumuman" class="hover:text-blue-600 transition">Pengumuman</a>
+      <a href="#kontak" class="hover:text-blue-600 transition">Kontak</a>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center gap-2.5">
+      <a href="/kiosk" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition">
+        <i data-lucide="scan" class="w-3.5 h-3.5"></i>
+        <span>Scanner Gerbang</span>
+      </a>
+
+      <% if (currentUser) { %>
+        <a href="/dashboard" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition">
+          <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i>
+          <span>Dashboard</span>
+        </a>
+      <% } else { %>
+        <a href="/login" class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition">
+          <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+          <span>Portal Login</span>
+        </a>
+      <% } %>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section with Optional School Banner -->
+<section id="beranda" class="relative overflow-hidden bg-slate-900 text-white py-16 md:py-24">
+  <% if (settings.school_hero_image) { %>
+    <div class="absolute inset-0 z-0 overflow-hidden">
+      <img src="<%= settings.school_hero_image %>" alt="Banner Sekolah" class="w-full h-full object-cover opacity-90 scale-100">
+      <div class="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/45 to-slate-900/20"></div>
+    </div>
+  <% } else { %>
+    <div class="absolute inset-0 z-0 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950/40"></div>
+  <% } %>
+
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center lg:text-left flex flex-col lg:flex-row items-center justify-between gap-12">
+    <!-- Left Hero Text -->
+    <div class="max-w-2xl">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/30 backdrop-blur-md border border-blue-400/40 text-blue-200 text-xs font-bold mb-4 shadow-sm">
+        <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span><%= settings.school_accreditation || 'Terakreditasi A (Unggul)' %></span>
+      </div>
+
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight text-white drop-shadow-[0_3px_6px_rgba(0,0,0,0.8)]">
+        <%= settings.school_tagline || 'Membentuk Generasi Cerdas, Unggul, dan Berakhlak Mulia' %>
+      </h2>
+
+      <p class="mt-4 text-sm sm:text-base text-slate-100 leading-relaxed max-w-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-medium">
+        <%= settings.school_description || 'Selamat datang di portal informasi resmi sekolah. Kami mengintegrasikan kurikulum unggulan dengan teknologi presensi pintar real-time untuk menjamin kenyamanan belajar putra-putri Anda.' %>
+      </p>
+
+      <div class="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3">
+        <a href="#cek-kehadiran" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/40 transition flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <span>Cek Kehadiran Siswa Mandiri</span>
+        </a>
+        <a href="#sambutan" class="px-5 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white backdrop-blur-md border border-slate-700 font-semibold text-xs sm:text-sm transition flex items-center gap-2 shadow-lg">
+          <i data-lucide="info" class="w-4 h-4"></i>
+          <span>Tentang Sekolah</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Right Quick Badge Card -->
+    <div class="w-full max-w-sm bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-3xl p-6 shadow-2xl text-left">
+      <div class="flex items-center gap-3 pb-4 border-b border-slate-700">
+        <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h4 class="font-bold text-white text-sm">Smart Attendance Gateway</h4>
+          <p class="text-[11px] text-slate-400">Notifikasi WhatsApp ke Orang Tua</p>
+        </div>
+      </div>
+
+      <div class="py-4 space-y-3 text-xs text-slate-300">
+        <div class="flex items-start gap-2">
+          <i data-lucide="check" class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+          <span>Presensi cepat menggunakan RFID & QR Code.</span>
+        </div>
+        <div class="flex items-start gap-2">
+          <i data-lucide="check" class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+          <span>Laporan terkirim otomatis ke nomor WhatsApp wali murid.</span>
+        </div>
+        <div class="flex items-start gap-2">
+          <i data-lucide="check" class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+          <span>Pemantauan riwayat kehadiran mandiri 24 jam.</span>
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-slate-700">
+        <a href="#cek-kehadiran" class="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition">
+          <span>Coba Pencarian Sekarang</span>
+          <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Strip -->
+<section class="bg-white border-b border-slate-200 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-y md:divide-y-0 md:divide-x divide-slate-100">
+      <div class="p-2">
+        <p class="text-3xl sm:text-4xl font-extrabold text-blue-600 font-mono"><%= overview.totalStudents %></p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Siswa Aktif</p>
+      </div>
+      <div class="p-2">
+        <p class="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono"><%= overview.totalTeachers %></p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Pendidik & Tenaga Ahli</p>
+      </div>
+      <div class="p-2">
+        <p class="text-3xl sm:text-4xl font-extrabold text-slate-900 font-mono"><%= overview.totalClasses %></p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Rombongan Belajar</p>
+      </div>
+      <div class="p-2">
+        <p class="text-3xl sm:text-4xl font-extrabold text-emerald-600 font-mono"><%= settings.school_stats_graduates || '100%' %></p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Tingkat Kelulusan</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Widget: Cek Kehadiran Mandiri Siswa -->
+<section id="cek-kehadiran" class="py-12 md:py-16 bg-slate-50 border-b border-slate-200 scroll-mt-20">
+  <div class="max-w-4xl mx-auto px-4 text-center">
+    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold mb-3">
+      <i data-lucide="search" class="w-3.5 h-3.5"></i>
+      <span>Layanan Mandiri Wali Murid</span>
+    </div>
+    <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+      Cek Riwayat Kehadiran Siswa
+    </h3>
+    <p class="mt-2 text-xs sm:text-sm text-slate-600 max-w-xl mx-auto">
+      Masukkan NIS atau NISN putra-putri Anda untuk memantau rekapitulasi kehadiran dan log presensi harian secara langsung.
+    </p>
+
+    <!-- Form Pencarian -->
+    <div class="mt-6 max-w-lg mx-auto">
+      <form action="/#cek-kehadiran" method="GET" class="flex flex-col sm:flex-row items-center gap-2 bg-white p-2 rounded-2xl shadow-lg border border-slate-200">
+        <div class="relative w-full flex items-center">
+          <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5"></i>
+          <input 
+            type="text" 
+            name="q" 
+            value="<%= keyword || '' %>" 
+            placeholder="Masukkan NIS / NISN siswa..." 
+            required
+            class="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl focus:outline-none text-slate-900 font-medium"
+          >
+        </div>
+        <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2 whitespace-nowrap">
+          <span>Periksa</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- Error Banner -->
+    <% if (errorMsg) { %>
+      <div class="mt-6 max-w-lg mx-auto bg-rose-50 border border-rose-200 rounded-xl p-3.5 flex items-center gap-3 text-rose-800 text-xs font-medium text-left">
+        <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+        <span><%= errorMsg %></span>
+      </div>
+    <% } %>
+
+    <!-- Hasil Pencarian Siswa -->
+    <% if (studentData) { %>
+      <div class="mt-10 text-left">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <!-- Kartu Profil Siswa -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start gap-4">
+              <% if (studentData.photo) { %>
+                <img src="<%= studentData.photo %>" alt="<%= studentData.name %>" class="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm">
+              <% } else { %>
+                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center font-bold text-2xl">
+                  <%= studentData.name.charAt(0) %>
+                </div>
+              <% } %>
+              <div>
+                <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 mb-1">
+                  Kelas <%= studentData.class_name %>
+                </span>
+                <h4 class="font-bold text-slate-900 text-base leading-tight"><%= studentData.name %></h4>
+                <p class="text-xs text-slate-500 mt-0.5">NIS: <span class="font-mono font-bold text-slate-700"><%= studentData.nis %></span> &bull; NISN: <span class="font-mono"><%= studentData.nisn || '-' %></span></p>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 text-xs space-y-2">
+              <div class="flex justify-between">
+                <span class="text-slate-500">Wali Murid:</span>
+                <span class="font-semibold text-slate-800"><%= studentData.parent_name || '-' %></span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-slate-500">Status Notifikasi WA:</span>
+                <% if (studentData.wa_status === 'confirmed') { %>
+                  <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px]">
+                    <i data-lucide="check-circle-2" class="w-3 h-3"></i> Terverifikasi (YA)
+                  </span>
+                <% } else if (studentData.wa_status === 'intro_sent') { %>
+                  <span class="inline-flex items-center gap-1 text-blue-700 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 text-[10px]">
+                    <i data-lucide="clock" class="w-3 h-3"></i> Menunggu Balas YA
+                  </span>
+                <% } else { %>
+                  <span class="inline-flex items-center gap-1 text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 text-[10px]">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i> Belum Terverifikasi
+                  </span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistik Bulan Ini -->
+          <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Rekap Presensi Bulan Ini</h4>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-slate-500">Persentase:</span>
+                  <span class="text-sm font-extrabold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 font-mono">
+                    <%= attendanceSummary.persentase %>%
+                  </span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-5 gap-2 text-center">
+                <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5">
+                  <p class="text-[11px] font-bold text-emerald-700">Hadir</p>
+                  <p class="text-xl font-extrabold text-emerald-800 font-mono mt-0.5"><%= attendanceSummary.hadir %></p>
+                </div>
+                <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-2.5">
+                  <p class="text-[11px] font-bold text-amber-700">Telat</p>
+                  <p class="text-xl font-extrabold text-amber-800 font-mono mt-0.5"><%= attendanceSummary.terlambat %></p>
+                </div>
+                <div class="bg-sky-50/70 border border-sky-200 rounded-xl p-2.5">
+                  <p class="text-[11px] font-bold text-sky-700">Izin</p>
+                  <p class="text-xl font-extrabold text-sky-800 font-mono mt-0.5"><%= attendanceSummary.izin %></p>
+                </div>
+                <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-2.5">
+                  <p class="text-[11px] font-bold text-indigo-700">Sakit</p>
+                  <p class="text-xl font-extrabold text-indigo-800 font-mono mt-0.5"><%= attendanceSummary.sakit %></p>
+                </div>
+                <div class="bg-rose-50/70 border border-rose-200 rounded-xl p-2.5">
+                  <p class="text-[11px] font-bold text-rose-700">Alpa</p>
+                  <p class="text-xl font-extrabold text-rose-800 font-mono mt-0.5"><%= attendanceSummary.alpa %></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="w-full bg-slate-100 rounded-full h-2.5 mt-5 overflow-hidden">
+              <div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: <%= attendanceSummary.persentase %>%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel Log Riwayat Harian -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h5 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Riwayat Kehadiran Harian Bulan Ini</h5>
+            <span class="text-xs text-slate-500 font-mono"><%= recentAttendances.length %> Hari Tercatat</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                  <th class="px-6 py-3">Tanggal</th>
+                  <th class="px-6 py-3">Jam Masuk</th>
+                  <th class="px-6 py-3">Status</th>
+                  <th class="px-6 py-3">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <% if (recentAttendances.length === 0) { %>
+                  <tr>
+                    <td colspan="4" class="px-6 py-6 text-center text-slate-400">Belum ada rekaman presensi bulan ini.</td>
+                  </tr>
+                <% } %>
+                <% recentAttendances.forEach(att => { %>
+                  <tr class="hover:bg-slate-50/50 transition">
+                    <td class="px-6 py-3 font-semibold text-slate-900 whitespace-nowrap">
+                      <%= new Date(att.date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) %>
+                    </td>
+                    <td class="px-6 py-3 font-mono text-slate-600 whitespace-nowrap">
+                      <%= att.time_in %> WIB
+                    </td>
+                    <td class="px-6 py-3 whitespace-nowrap">
+                      <% if (att.status === 'HADIR') { %>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Hadir Tepat Waktu
+                        </span>
+                      <% } else if (att.status === 'TERLAMBAT') { %>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+                          Terlambat (<%= att.late_minutes %>m)
+                        </span>
+                      <% } else if (att.status === 'SAKIT') { %>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          Sakit
+                        </span>
+                      <% } else if (att.status === 'IZIN') { %>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-sky-50 text-sky-700 border border-sky-200">
+                          Izin
+                        </span>
+                      <% } else { %>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-rose-50 text-rose-700 border border-rose-200">
+                          Alpa
+                        </span>
+                      <% } %>
+                    </td>
+                    <td class="px-6 py-3 text-slate-500">
+                      <%= att.notes || '-' %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<!-- Sambutan Kepala Sekolah -->
+<section id="sambutan" class="py-16 md:py-20 bg-white border-b border-slate-200 scroll-mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row items-center gap-12">
+      <!-- Foto Kepala Sekolah -->
+      <div class="w-full lg:w-1/3 flex justify-center flex-shrink-0">
+        <div class="relative w-64 h-80 rounded-3xl overflow-hidden shadow-xl border-4 border-white ring-1 ring-slate-200">
+          <% if (settings.school_principal_photo) { %>
+            <img src="<%= settings.school_principal_photo %>" alt="Kepala Sekolah" class="w-full h-full object-cover">
+          <% } else { %>
+            <div class="w-full h-full bg-gradient-to-br from-blue-700 to-indigo-900 flex flex-col items-center justify-center text-white p-6 text-center">
+              <i data-lucide="user-check" class="w-20 h-20 text-blue-200 mb-3"></i>
+              <p class="font-bold text-base"><%= settings.school_principal_name || 'Kepala Sekolah' %></p>
+              <p class="text-xs text-blue-200">Pimpinan Institusi</p>
+            </div>
+          <% } %>
+          <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/80 to-transparent p-4 text-white text-center">
+            <h4 class="font-bold text-sm"><%= settings.school_principal_name || 'Drs. H. Mulyadi, M.Pd' %></h4>
+            <p class="text-[11px] text-blue-300 font-semibold">Kepala Sekolah</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teks Sambutan -->
+      <div class="w-full lg:w-2/3 text-left">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-3 border border-blue-200">
+          <i data-lucide="quote" class="w-3.5 h-3.5"></i>
+          <span>Sambutan Pimpinan Sekolah</span>
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
+          Mewujudkan Pendidikan Berkarakter & Adaptif Teknologi
+        </h3>
+        <p class="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed whitespace-pre-line">
+          <%= settings.school_principal_welcome || 'Selamat datang di website resmi sekolah kami. Kami berkomitmen untuk mendampingi setiap peserta didik dalam meraih prestasi terbaik, menanamkan nilai-nilai integritas budi pekerti, serta menjalin keterbukaan komunikasi dengan seluruh orang tua melalui pemanfaatan sistem digital presensi terkini.' %>
+        </p>
+
+        <div class="mt-6 pt-6 border-t border-slate-100 flex items-center gap-4">
+          <div>
+            <p class="font-extrabold text-slate-900 text-sm"><%= settings.school_principal_name || 'Drs. H. Mulyadi, M.Pd' %></p>
+            <p class="text-xs text-slate-500">Kepala <%= settings.school_name || 'Sekolah' %></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Dewan Guru & Tenaga Pendidik -->
+<section id="guru" class="py-16 md:py-20 bg-slate-50 border-b border-slate-200 scroll-mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-10">
+      <div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold mb-2">
+          <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-blue-600"></i>
+          <span>Pendidik & Tenaga Ahli</span>
+        </div>
+        <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Dewan Guru & Tenaga Pendidik</h3>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Tenaga pendidik profesional dan berdedikasi yang membimbing siswa-siswi meraih prestasi terbaik.</p>
+      </div>
+      <span class="text-xs font-semibold px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 shadow-xs">
+        Total: <strong class="text-blue-600 font-mono"><%= teachers.length %></strong> Pendidik & Staf
+      </span>
+    </div>
+
+    <% if (teachers.length === 0) { %>
+      <div class="p-10 text-center text-slate-400 text-xs bg-white rounded-2xl border border-slate-200">
+        Belum ada data guru yang terdaftar di database.
+      </div>
+    <% } else { %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <% teachers.forEach(t => { %>
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between group">
+            <div class="flex items-start gap-3.5">
+              <div class="w-12 h-12 rounded-xl <%= t.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' %> flex items-center justify-center font-extrabold text-base shrink-0 group-hover:scale-105 transition">
+                <i data-lucide="<%= t.role === 'admin' ? 'shield-check' : 'graduation-cap' %>" class="w-6 h-6"></i>
+              </div>
+              <div class="min-w-0">
+                <h4 class="font-bold text-slate-900 text-sm leading-snug truncate" title="<%= t.name %>">
+                  <%= t.name %>
+                </h4>
+                <p class="text-[11px] text-slate-400 font-mono mt-0.5">@<%= t.username %></p>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+              <% if (t.class_name) { %>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  <i data-lucide="book-open" class="w-3 h-3"></i>
+                  Wali Kelas <%= t.class_name %>
+                </span>
+              <% } else if (t.role === 'admin') { %>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                  <i data-lucide="shield" class="w-3 h-3"></i>
+                  Administrator
+                </span>
+              <% } else { %>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200">
+                  <i data-lucide="user" class="w-3 h-3"></i>
+                  Tenaga Pendidik
+                </span>
+              <% } %>
+
+              <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Aktif
+              </span>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<!-- Visi & Misi Sekolah -->
+<section id="visi-misi" class="py-16 bg-slate-50 border-b border-slate-200 scroll-mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto mb-12">
+      <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Visi & Misi Pendidikan</h3>
+      <p class="text-xs sm:text-sm text-slate-500 mt-2">Fondasi dan arah tujuan dalam membimbing generasi penerus bangsa.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Visi -->
+      <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold mb-4">
+            <i data-lucide="compass" class="w-6 h-6"></i>
+          </div>
+          <h4 class="font-extrabold text-slate-900 text-lg mb-3">Visi Sekolah</h4>
+          <p class="text-sm text-slate-700 leading-relaxed font-medium italic">
+            "<%= settings.school_vision || 'Mewujudkan insan cendekia yang beriman, berakhlak mulia, berprestasi unggul di tingkat nasional, serta adaptif terhadap perkembangan teknologi modern.' %>"
+          </p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-blue-600 font-bold">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          <span>Orientasi Masa Depan</span>
+        </div>
+      </div>
+
+      <!-- Misi -->
+      <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold mb-4">
+            <i data-lucide="target" class="w-6 h-6"></i>
+          </div>
+          <h4 class="font-extrabold text-slate-900 text-lg mb-3">Misi Sekolah</h4>
+          <div class="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line space-y-2">
+            <%= settings.school_mission || '1. Menyelenggarakan proses pembelajaran inovatif berbasis teknologi digital.\n2. Menumbuhkan nilai integritas, kedisiplinan, dan budi pekerti luhur.\n3. Mengembangkan sarana prasarana sekolah pintar (Smart School) ramah lingkungan.\n4. Membangun kemitraan harmonis dan transparan dengan orang tua siswa.' %>
+          </div>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-emerald-600 font-bold">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          <span>Langkah Nyata Bersama</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Program Unggulan & Fasilitas -->
+<section id="program" class="py-16 md:py-20 bg-white border-b border-slate-200 scroll-mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto mb-12">
+      <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Program Unggulan & Fasilitas</h3>
+      <p class="text-xs sm:text-sm text-slate-500 mt-2">Dukungan infrastruktur belajar komprehensif demi memfasilitasi bakat siswa.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center mb-4">
+          <i data-lucide="qr-code" class="w-5 h-5"></i>
+        </div>
+        <h4 class="font-bold text-slate-900 text-base mb-2">Presensi Digital & WhatsApp Gateway</h4>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Kartu pintar pelajar RFID & QR Code dengan notifikasi otomatis langsung ke nomor orang tua/wali murid saat ananda hadir di gerbang.
+        </p>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center mb-4">
+          <i data-lucide="monitor" class="w-5 h-5"></i>
+        </div>
+        <h4 class="font-bold text-slate-900 text-base mb-2">Laboratorium Komputer & Riset IT</h4>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Fasilitas komputasi modern dengan akses jaringan berkecepatan tinggi untuk menunjang kompetensi pemrograman, desain grafis, dan sains data.
+        </p>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm hover:shadow-md transition">
+        <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center mb-4">
+          <i data-lucide="book-open" class="w-5 h-5"></i>
+        </div>
+        <h4 class="font-bold text-slate-900 text-base mb-2">Perpustakaan & Literasi Modern</h4>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Ruang baca yang nyaman dengan ribuan koleksi buku referensi, karya ilmiah, serta platform e-library untuk memperluas cakrawala siswa.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Galeri Foto Sekolah (Kegiatan & Fasilitas) -->
+<section id="galeri" class="py-16 md:py-20 bg-slate-50 border-b border-slate-200 scroll-mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-10">
+      <div>
+        <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Galeri Foto Kegiatan & Fasilitas</h3>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Dokumentasi suasana belajar, sarana prasarana, dan prestasi siswa.</p>
+      </div>
+      <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-200 text-slate-700">
+        <%= gallery.length %> Dokumentasi
+      </span>
+    </div>
+
+    <% if (gallery.length === 0) { %>
+      <div class="p-12 text-center text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">
+        Belum ada foto galeri yang diunggah. Admin dapat menambahkannya melalui menu CMS di Dashboard.
+      </div>
+    <% } else { %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <% gallery.forEach(item => { %>
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div class="relative w-full aspect-video bg-slate-100 overflow-hidden">
+              <% if (item.image_url) { %>
+                <img src="<%= item.image_url %>" alt="<%= item.title %>" class="w-full h-full object-cover hover:scale-105 transition duration-300">
+              <% } else { %>
+                <div class="w-full h-full flex flex-col items-center justify-center text-slate-400 p-4">
+                  <i data-lucide="image" class="w-8 h-8 mb-1"></i>
+                  <span class="text-[10px]">Dokumentasi Sekolah</span>
+                </div>
+              <% } %>
+              <span class="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900/80 text-white backdrop-blur-sm">
+                <%= item.category || 'Fasilitas' %>
+              </span>
+            </div>
+
+            <div class="p-4">
+              <h5 class="font-bold text-slate-900 text-xs leading-snug line-clamp-2"><%= item.title %></h5>
+              <% if (item.description) { %>
+                <p class="text-[11px] text-slate-500 mt-1 line-clamp-2"><%= item.description %></p>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<!-- Pengumuman & Agenda -->
+<section id="pengumuman" class="py-16 bg-white border-b border-slate-200 scroll-mt-16">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-gradient-to-br from-blue-50/50 via-white to-slate-50 p-8 rounded-3xl border border-blue-100 shadow-sm">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+          <i data-lucide="megaphone" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h3 class="font-extrabold text-slate-900 text-lg"><%= settings.announcement_title || 'Pemberitahuan Penting Sekolah' %></h3>
+          <p class="text-xs text-slate-500">Papan Pengumuman Resmi</p>
+        </div>
+      </div>
+
+      <p class="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+        <%= settings.announcement_content || 'Wali murid diharapkan menyimpan kontak WhatsApp sekolah agar notifikasi presensi harian dapat terkirim lancar.' %>
+      </p>
+
+      <div class="mt-6 pt-4 border-t border-slate-200/60 flex flex-wrap items-center gap-6 text-xs text-slate-500 font-medium">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i>
+          Pintu Gerbang Ditutup: <strong class="text-slate-800"><%= settings.toleransi_telat || '07:15' %> WIB</strong>
+        </span>
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="calendar" class="w-4 h-4 text-emerald-600"></i>
+          Hari Aktif: <strong class="text-slate-800">Senin &ndash; Jumat</strong>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Kontak & Informasi Lokasi Sekolah -->
+<section id="kontak" class="py-16 bg-slate-900 text-slate-300 scroll-mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <!-- Identitas -->
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <% if (settings.school_logo) { %>
+            <img src="<%= settings.school_logo %>" alt="Logo" class="w-10 h-10 object-contain rounded-lg">
+          <% } %>
+          <h4 class="font-extrabold text-white text-base"><%= settings.school_name || 'SMA Negeri 1 Prestasi' %></h4>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed mb-4">
+          <%= settings.school_description || 'Lembaga pendidikan berintegritas yang berdedikasi melahirkan generasi cerdas dan bertakwa.' %>
+        </p>
+        <span class="inline-block px-3 py-1 rounded-full text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800">
+          <%= settings.school_accreditation || 'Terakreditasi A (Unggul)' %>
+        </span>
+      </div>
+
+      <!-- Alamat & Kontak -->
+      <div>
+        <h5 class="font-bold text-white text-xs uppercase tracking-wider mb-4">Kontak & Alamat Resmi</h5>
+        <div class="space-y-3 text-xs text-slate-400">
+          <div class="flex items-start gap-2.5">
+            <i data-lucide="map-pin" class="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5"></i>
+            <span><%= settings.school_address || 'Jl. Pendidikan No. 45, Kota Harapan Bangsa' %></span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="phone" class="w-4 h-4 text-emerald-400 flex-shrink-0"></i>
+            <span>Telepon: <strong class="text-slate-200"><%= settings.school_phone || '-' %></strong></span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="mail" class="w-4 h-4 text-amber-400 flex-shrink-0"></i>
+            <span>Email: <strong class="text-slate-200"><%= settings.school_email || '-' %></strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tautan Cepat -->
+      <div>
+        <h5 class="font-bold text-white text-xs uppercase tracking-wider mb-4">Akses Layanan Cepat</h5>
+        <ul class="space-y-2 text-xs">
+          <li>
+            <a href="#cek-kehadiran" class="hover:text-white transition flex items-center gap-1.5">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-blue-400"></i>
+              <span>Cek Presensi Mandiri Siswa</span>
+            </a>
+          </li>
+          <li>
+            <a href="/kiosk" target="_blank" class="hover:text-white transition flex items-center gap-1.5">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Layar Scanner Gerbang Sekolah</span>
+            </a>
+          </li>
+          <li>
+            <a href="/login" class="hover:text-white transition flex items-center gap-1.5">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+              <span>Portal Login Guru & Administrator</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

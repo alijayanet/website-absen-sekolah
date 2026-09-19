@@ -1,0 +1,343 @@
+<%- include('../partials/header', { title: 'Data Guru & Wali Kelas', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">Data Guru & Wali</h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">Manajemen akun pendidik dan penetapan wali kelas binaan</p>
+        </div>
+      </div>
+
+      <button onclick="openModal('addTeacherModal')" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition shrink-0" title="Tambah Guru / Wali Kelas Baru">
+        <i data-lucide="user-plus" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+        <span class="hidden sm:inline sm:ml-1.5">Tambah Guru</span>
+      </button>
+    </header>
+
+    <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl">
+      <!-- Flash Messages -->
+      <% if (successMsg) { %>
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+          <span><%= successMsg %></span>
+        </div>
+      <% } %>
+      <% if (errorMsg) { %>
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+          <span><%= errorMsg %></span>
+        </div>
+      <% } %>
+
+      <!-- Ringkasan Statistik Guru -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="users" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Akun</p>
+            <h3 class="text-2xl font-black text-slate-900"><%= users.length %></h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">Guru & Administrator</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Wali Kelas Aktif</p>
+            <h3 class="text-2xl font-black text-slate-900">
+              <%= users.filter(u => u.role === 'guru' && u.class_id).length %>
+            </h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">Memiliki kelas binaan</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="shield-check" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Administrator</p>
+            <h3 class="text-2xl font-black text-slate-900">
+              <%= users.filter(u => u.role === 'admin').length %>
+            </h3>
+            <p class="text-[11px] text-slate-500 mt-0.5">Akses penuh sistem</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabel Daftar Guru & Wali Kelas -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">Daftar Pendidik & Wali Kelas</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Setiap guru yang ditugaskan sebagai wali kelas otomatis hanya mengakses data siswa di kelasnya.</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase tracking-wider font-semibold text-[10px]">
+              <tr>
+                <th class="px-6 py-3">Nama Pendidik</th>
+                <th class="px-6 py-3">Username</th>
+                <th class="px-6 py-3">Peran (Role)</th>
+                <th class="px-6 py-3">Kelas Binaan (Wali Kelas)</th>
+                <th class="px-6 py-3">Terdaftar Sejak</th>
+                <th class="px-6 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (users.length === 0) { %>
+                <tr>
+                  <td colspan="6" class="px-6 py-8 text-center text-slate-400">
+                    Belum ada data guru yang terdaftar.
+                  </td>
+                </tr>
+              <% } %>
+
+              <% users.forEach(u => { %>
+                <tr class="hover:bg-slate-50/80 transition">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-full <%= u.role === 'admin' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-blue-100 text-blue-700 border border-blue-200' %> flex items-center justify-center font-bold text-xs flex-shrink-0">
+                        <%= u.name.charAt(0) %>
+                      </div>
+                      <div>
+                        <p class="font-bold text-slate-900"><%= u.name %></p>
+                        <p class="text-[10px] text-slate-400">ID Akun: #<%= u.id %></p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 font-mono font-bold text-slate-700">
+                    @<%= u.username %>
+                  </td>
+                  <td class="px-6 py-4">
+                    <% if (u.role === 'admin') { %>
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        <i data-lucide="shield" class="w-3 h-3"></i> Administrator
+                      </span>
+                    <% } else { %>
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        <i data-lucide="book-open" class="w-3 h-3"></i> Guru / Pendidik
+                      </span>
+                    <% } %>
+                  </td>
+                  <td class="px-6 py-4">
+                    <% if (u.class_id && u.class_name) { %>
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                        <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span>Wali Kelas <%= u.class_name %></span>
+                      </span>
+                    <% } else if (u.role === 'admin') { %>
+                      <span class="text-slate-400 text-xs italic">Semua Kelas (Akses Penuh)</span>
+                    <% } else { %>
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        Belum Ditugaskan
+                      </span>
+                    <% } %>
+                  </td>
+                  <td class="px-6 py-4 text-slate-400">
+                    <%= new Date(u.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                  </td>
+                  <td class="px-6 py-4 text-right space-x-1.5">
+                    <!-- Tombol Edit -->
+                    <button onclick='openEditTeacherModal(<%- JSON.stringify(u) %>)' class="p-1.5 rounded-md hover:bg-blue-50 text-blue-600 transition" title="Edit Akun Guru">
+                      <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </button>
+
+                    <!-- Tombol Hapus -->
+                    <% if (currentUser.id !== u.id) { %>
+                      <form action="/dashboard/teachers/<%= u.id %>/delete" method="POST" class="inline-block" onsubmit="return confirm('Hapus akun <%= u.name %>? Pengguna ini tidak akan bisa login lagi.')">
+                        <button type="submit" class="p-1.5 rounded-md hover:bg-rose-50 text-rose-600 transition" title="Hapus Akun">
+                          <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                      </form>
+                    <% } else { %>
+                      <span class="inline-block p-1.5 text-slate-300 cursor-not-allowed" title="Akun Anda Sendiri">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Tambah Guru Baru -->
+<div id="addTeacherModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+        <i data-lucide="user-plus" class="w-4 h-4 text-blue-600"></i>
+        <span>Tambah Akun Guru / Wali Kelas</span>
+      </h3>
+      <button onclick="closeModal('addTeacherModal')" class="text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <form action="/dashboard/teachers" method="POST" class="mt-4 space-y-3.5 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar *</label>
+        <input type="text" name="name" required placeholder="Contoh: Budi Santoso, S.Pd" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Username Login *</label>
+          <input type="text" name="username" required placeholder="Contoh: guru_ipa1" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Password *</label>
+          <input type="password" name="password" required placeholder="Minimal 6 karakter" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Peran Akun *</label>
+        <select name="role" id="add_teacher_role" onchange="toggleRoleClass('add')" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+          <option value="guru" selected>Guru / Wali Kelas</option>
+          <option value="admin">Administrator (Akses Penuh)</option>
+        </select>
+      </div>
+
+      <div id="add_class_container">
+        <label class="block font-semibold text-slate-700 mb-1">Kelas Binaan (Sebagai Wali Kelas)</label>
+        <select name="class_id" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+          <option value="">-- Bukan Wali Kelas / Pengajar Umum --</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>">Kelas <%= c.name %> (Tingkat <%= c.level || '-' %>)</option>
+          <% }) %>
+        </select>
+        <p class="text-[10px] text-slate-500 mt-1">Saat login, guru ini otomatis hanya dapat melihat dan mengelola data siswa di kelas yang dipilih.</p>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('addTeacherModal')" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold transition">
+          Batal
+        </button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition">
+          Simpan Akun Guru
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Edit Guru -->
+<div id="editTeacherModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+        <i data-lucide="edit-2" class="w-4 h-4 text-blue-600"></i>
+        <span>Edit Akun Guru & Kelas Binaan</span>
+      </h3>
+      <button onclick="closeModal('editTeacherModal')" class="text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <form id="editTeacherForm" method="POST" class="mt-4 space-y-3.5 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar *</label>
+        <input type="text" name="name" id="edit_name" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Username Login *</label>
+          <input type="text" name="username" id="edit_username" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Peran Akun *</label>
+          <select name="role" id="edit_role" onchange="toggleRoleClass('edit')" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+            <option value="guru">Guru / Wali Kelas</option>
+            <option value="admin">Administrator</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="edit_class_container">
+        <label class="block font-semibold text-slate-700 mb-1">Kelas Binaan (Sebagai Wali Kelas)</label>
+        <select name="class_id" id="edit_class_id" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+          <option value="">-- Bukan Wali Kelas / Pengajar Umum --</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>">Kelas <%= c.name %> (Tingkat <%= c.level || '-' %>)</option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Ganti Password (Opsional)</label>
+        <input type="password" name="password" placeholder="Kosongkan jika tidak ingin mengubah password" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('editTeacherModal')" class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold transition">
+          Batal
+        </button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition">
+          Perbarui Akun
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+  }
+
+  function openEditTeacherModal(user) {
+    document.getElementById('editTeacherForm').action = `/dashboard/teachers/${user.id}/edit`;
+    document.getElementById('edit_name').value = user.name;
+    document.getElementById('edit_username').value = user.username;
+    document.getElementById('edit_role').value = user.role;
+    document.getElementById('edit_class_id').value = user.class_id || '';
+    toggleRoleClass('edit');
+    openModal('editTeacherModal');
+  }
+
+  function toggleRoleClass(type) {
+    const roleSelect = document.getElementById(`${type}_role` || `${type}_teacher_role`);
+    const classContainer = document.getElementById(`${type}_class_container`);
+    if (roleSelect && classContainer) {
+      if (roleSelect.value === 'admin') {
+        classContainer.classList.add('opacity-50', 'pointer-events-none');
+      } else {
+        classContainer.classList.remove('opacity-50', 'pointer-events-none');
+      }
+    }
+  }
+</script>
+
+<%- include('../partials/footer', { isDashboard: true }) %>

@@ -1,0 +1,73 @@
+<%- include('partials/header', { title: 'Login Portal Pengguna' }) %>
+
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
+  <div class="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl">
+    <div class="text-center">
+      <% if (settings.school_logo) { %>
+        <img src="<%= settings.school_logo %>" alt="Logo" class="mx-auto w-14 h-14 object-contain rounded-xl shadow-sm">
+      <% } else { %>
+        <div class="mx-auto w-14 h-14 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold text-2xl shadow-sm">
+          <%= (settings.school_name || 'S').charAt(0) %>
+        </div>
+      <% } %>
+      <h2 class="mt-4 text-2xl font-extrabold text-slate-900 tracking-tight">Portal Absensi Sekolah</h2>
+      <p class="mt-1 text-xs text-slate-500 font-medium"><%= settings.school_name || 'Sistem Manajemen Kehadiran Siswa' %></p>
+    </div>
+
+    <% if (error) { %>
+      <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 flex items-center gap-3 text-rose-800 text-xs font-medium">
+        <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+        <span><%= error %></span>
+      </div>
+    <% } %>
+
+    <form class="mt-8 space-y-4" action="/login" method="POST">
+      <div>
+        <label for="username" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Username</label>
+        <div class="relative">
+          <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+          <input 
+            id="username" 
+            name="username" 
+            type="text" 
+            required 
+            placeholder="Masukkan username Anda..." 
+            class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+          >
+        </div>
+      </div>
+
+      <div>
+        <label for="password" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kata Sandi</label>
+        <div class="relative">
+          <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+          <input 
+            id="password" 
+            name="password" 
+            type="password" 
+            required 
+            placeholder="••••••••" 
+            class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+          >
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <button type="submit" class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2">
+          <span>Masuk ke Dashboard</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </form>
+
+
+    <div class="text-center pt-2">
+      <a href="/" class="text-xs text-slate-500 hover:text-blue-600 inline-flex items-center gap-1 font-medium">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        Kembali ke Halaman Beranda
+      </a>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

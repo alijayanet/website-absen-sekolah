@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cetak Kartu Pelajar - <%= settings.school_name || 'Sekolah' %></title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Dimensi Standar ID Card Pelajar (85.60 mm × 53.98 mm) */
+    .student-card {
+      width: 85.6mm;
+      height: 53.98mm;
+      border-radius: 3.5mm;
+      overflow: hidden;
+      position: relative;
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+      background-image: 
+        radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 0% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+        radial-gradient(#e2e8f0 0.75px, transparent 0.75px),
+        radial-gradient(#f8fafc 0.75px, #ffffff 0.75px);
+      background-size: 100% 100%, 100% 100%, 5px 5px, 5px 5px;
+      background-position: 0 0, 0 0, 0 0, 2.5px 2.5px;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Print Controls Bar */
+    .no-print {
+      padding: 14px 24px;
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1040px;
+      margin: 0 auto 20px auto;
+      border-radius: 0 0 16px 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Sheet Grid */
+    .card-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      padding: 10px 20px 40px 20px;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .card-grid {
+        padding: 0;
+        gap: 6mm;
+      }
+      .student-card {
+        box-shadow: none;
+        border: 0.5px solid #94a3b8;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Controls Bar -->
+  <div class="no-print">
+    <div>
+      <h2 style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+        <span>Pratinjau Cetak Kartu Pelajar</span>
+        <span style="font-size: 10px; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 6px; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;">
+          ● RESMI TERVERIFIKASI
+        </span>
+      </h2>
+      <p style="font-size: 11px; color: #64748b; margin-top: 3px;">
+        Ukuran Standar ID Card: <strong>85.60 mm × 53.98 mm</strong> &bull; Siap dicetak: <strong><%= students.length %> Kartu</strong>
+      </p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button onclick="window.print()" class="btn btn-primary">
+        🖨️ Cetak / Simpan PDF
+      </button>
+      <button onclick="window.close()" class="btn btn-secondary">
+        Tutup
+      </button>
+    </div>
+  </div>
+
+  <!-- Cards Grid -->
+  <div class="card-grid">
+    <% students.forEach(s => { %>
+      <div class="student-card">
+        
+        <!-- Header Kartu Modern Elegan -->
+        <div style="position: relative; background: linear-gradient(135deg, #091a3c 0%, #0f2c69 50%, #1e40af 100%); padding: 5px 8px; color: #ffffff; display: flex; align-items: center; justify-content: space-between; overflow: hidden; height: 13.8mm;">
+          
+          <!-- Ornamen Akses Lingkaran Halus -->
+          <div style="position: absolute; right: -15px; top: -15px; width: 65px; height: 65px; background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+          <div style="position: absolute; right: 28px; bottom: -22px; width: 45px; height: 45px; background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, transparent 70%); border-radius: 50%; pointer-events: none;"></div>
+          
+          <!-- Logo dan Nama Sekolah -->
+          <div style="display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; z-index: 1;">
+            <% if (settings.school_logo) { %>
+              <div style="width: 27px; height: 27px; border-radius: 6px; background: #ffffff; padding: 2px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 0.5px solid rgba(255,255,255,0.8);">
+                <img src="<%= settings.school_logo %>" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+              </div>
+            <% } else { %>
+              <div style="width: 27px; height: 27px; border-radius: 6px; background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%); color: #ffffff; font-weight: 800; font-size: 11pt; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                <%= (settings.school_name || 'S').charAt(0) %>
+              </div>
+            <% } %>
+
+            <div style="min-width: 0; flex: 1;">
+              <h1 style="font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.15; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.25);">
+                <%= settings.school_name || 'SEKOLAH INDONESIA' %>
+              </h1>
+              <div style="font-size: 4.8pt; color: #38bdf8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; margin-top: 1px;">
+                KARTU IDENTITAS PELAJAR
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Garis Aksen Gradien Multi-Tone -->
+        <div style="height: 2.2px; background: linear-gradient(90deg, #38bdf8 0%, #818cf8 35%, #f59e0b 70%, #10b981 100%);"></div>
+
+        <!-- Body Kartu -->
+        <div style="padding: 5px 8px; display: flex; gap: 8px; align-items: center; flex: 1; min-height: 0; position: relative; z-index: 1;">
+          
+          <!-- Foto Siswa (Pasfoto) -->
+          <div style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0;">
+            <div style="width: 22mm; height: 27.5mm; border-radius: 5px; overflow: hidden; border: 1.5px solid #ffffff; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12), 0 0 0 1px #cbd5e1; background: #f8fafc; position: relative; display: flex; align-items: center; justify-content: center;">
+              <% if (s.photo) { %>
+                <img src="<%= s.photo %>" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+              <% } else { %>
+                <!-- Avatar Silhouette Elegan jika foto belum diunggah -->
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);">
+                  <svg width="42" height="42" viewBox="0 0 64 64" fill="none" style="margin-top: 4px;">
+                    <circle cx="32" cy="22" r="14" fill="#cbd5e1"/>
+                    <path d="M12 56C12 45 20.9543 38 32 38C43.0457 38 52 45 52 56" fill="#94a3b8"/>
+                    <path d="M26 38L32 46L38 38" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.65); color: #ffffff; font-size: 3.8pt; font-weight: 700; text-align: center; padding: 1.5px 0; letter-spacing: 0.5px;">
+                    PASFOTO
+                  </span>
+                </div>
+              <% } %>
+            </div>
+            <div style="margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 2.5px; background: #ecfdf5; border: 0.5px solid #a7f3d0; border-radius: 9999px; padding: 0.8px 4px;">
+              <span style="width: 3.5px; height: 3.5px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <span style="font-size: 4.5pt; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.3px;">
+                SISWA AKTIF
+              </span>
+            </div>
+          </div>
+
+          <!-- Rincian Identitas Siswa -->
+          <div style="flex: 1; min-width: 0; padding-right: 2px;">
+            <div style="font-size: 9.5pt; font-weight: 800; color: #091a3c; line-height: 1.15; letter-spacing: -0.2px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2.5px;">
+              <%= s.name %>
+            </div>
+
+            <!-- Badge Rombel Kelas -->
+            <div style="margin-bottom: 4px;">
+              <span style="display: inline-flex; align-items: center; font-size: 5.5pt; font-weight: 800; color: #1d4ed8; background: #eff6ff; border: 0.8px solid #bfdbfe; border-radius: 4px; padding: 1px 6px; text-transform: uppercase; letter-spacing: 0.3px;">
+                KELAS <%= s.class_name || '-' %>
+              </span>
+            </div>
+
+            <!-- List Data Identitas Siswa -->
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <div style="display: flex; align-items: center; background: #f8fafc; border: 0.5px solid #f1f5f9; border-radius: 3px; padding: 1px 4.5px;">
+                <span style="width: 23px; font-size: 5pt; font-weight: 700; color: #64748b; text-transform: uppercase;">NIS</span>
+                <span class="font-mono" style="font-size: 6.2pt; font-weight: 800; color: #0f172a;"><%= s.nis %></span>
+              </div>
+
+              <div style="display: flex; align-items: center; background: #f8fafc; border: 0.5px solid #f1f5f9; border-radius: 3px; padding: 1px 4.5px;">
+                <span style="width: 23px; font-size: 5pt; font-weight: 700; color: #64748b; text-transform: uppercase;">NISN</span>
+                <span class="font-mono" style="font-size: 5.8pt; font-weight: 700; color: #334155;"><%= s.nisn || '-' %></span>
+              </div>
+
+              <% if (s.rfid_uid) { %>
+                <div style="display: flex; align-items: center; background: #eff6ff; border: 0.5px solid #dbeafe; border-radius: 3px; padding: 1px 4.5px;">
+                  <span style="width: 23px; font-size: 5pt; font-weight: 700; color: #2563eb; text-transform: uppercase;">RFID</span>
+                  <span class="font-mono" style="font-size: 5.6pt; font-weight: 800; color: #1d4ed8;"><%= s.rfid_uid %></span>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- QR Code Scanner Box -->
+          <div style="width: 23mm; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2.5px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06); position: relative; flex-shrink: 0;">
+            <img src="<%= s.qr_data_url %>" style="width: 20mm; height: 20mm; display: block; border-radius: 3px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 2.5px; margin-top: 1.5px; width: 100%; background: #0f172a; border-radius: 3px; padding: 1px 0;">
+              <svg width="6.5" height="6.5" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+                <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+                <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+                <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+              </svg>
+              <span style="font-size: 4pt; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; text-transform: uppercase;">
+                SCAN ABSEN
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer Strip Kartu Modern -->
+        <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 2px 8px; display: flex; justify-content: space-between; align-items: center; font-size: 4.8pt; color: #64748b;">
+          <div style="display: flex; align-items: center; gap: 3px; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" style="flex-shrink: 0;">
+              <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span style="font-weight: 600;">
+              <%= settings.school_address || settings.school_phone || 'Kartu Tanda Pelajar Resmi' %>
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 3px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;">
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" style="flex-shrink: 0;">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>KARTU IDENTITAS RESMI</span>
+          </div>
+        </div>
+
+      </div>
+    <% }) %>
+  </div>
+
+</body>
+</html>

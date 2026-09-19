@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layar Kiosk Scanner Absensi - <%= settings.school_name || 'Sekolah' %></title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- HTML5 QR Code Scanner CDN -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Fix HTML5 QR Code Video Container agar pas & responsif di layar HP */
+    #qr-reader {
+      width: 100% !important;
+      height: 100% !important;
+      border: none !important;
+      background: #000 !important;
+      position: relative !important;
+      overflow: hidden !important;
+    }
+    #qr-reader__scan_region {
+      width: 100% !important;
+      height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    #qr-reader video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      border-radius: 0.75rem !important;
+    }
+    #qr-reader__dashboard_section,
+    #qr-reader img[alt="Info icon"] {
+      display: none !important;
+    }
+
+    /* Laser Scanner Animation */
+    @keyframes scanLaser {
+      0% { top: 8%; opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { top: 92%; opacity: 0.2; }
+    }
+    .animate-scan-laser {
+      animation: scanLaser 2s ease-in-out infinite alternate;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between select-none overflow-y-auto md:overflow-hidden">
+
+  <!-- Header Layar Kiosk (Kompak & Responsif) -->
+  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700/80 px-4 py-2.5 sm:px-6 sm:py-3.5 flex items-center justify-between z-20 shrink-0 sticky top-0 md:relative">
+    <div class="flex items-center gap-2.5 sm:gap-3">
+      <% if (settings.school_logo) { %>
+        <img src="<%= settings.school_logo %>" alt="Logo" class="w-9 h-9 sm:w-11 sm:h-11 object-contain rounded-lg">
+      <% } else { %>
+        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-base sm:text-xl">
+          <%= (settings.school_name || 'S').charAt(0) %>
+        </div>
+      <% } %>
+      <div>
+        <h1 class="text-sm sm:text-lg font-bold tracking-tight text-white leading-tight truncate max-w-[170px] sm:max-w-none"><%= settings.school_name || 'Absensi Gerbang Sekolah' %></h1>
+        <p class="text-[10px] sm:text-xs text-slate-400 font-medium hidden sm:block">Layar Presensi Mandiri Siswa (RFID & QR Code)</p>
+        <p class="text-[10px] text-emerald-400 font-medium sm:hidden flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Mode Kiosk Presensi
+        </p>
+      </div>
+    </div>
+
+    <!-- Jam Digital Realtime & Status Sesi -->
+    <div class="flex items-center gap-3 sm:gap-6">
+      <div class="text-right">
+        <div id="liveClock" class="font-mono text-xl sm:text-2xl font-bold text-emerald-400 tracking-wider">00:00:00</div>
+        <div id="liveDate" class="text-[10px] sm:text-xs text-slate-400 hidden sm:block">Memuat tanggal...</div>
+      </div>
+      <div class="hidden sm:flex items-center gap-2 bg-slate-700/60 px-3 py-1.5 rounded-lg border border-slate-600 text-xs text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+        <span>Batas Masuk: <strong class="text-white font-mono"><%= settings.toleransi_telat || '07:15' %></strong></span>
+      </div>
+      <a href="/dashboard" class="p-1.5 sm:p-2 rounded-lg bg-slate-700/60 hover:bg-slate-600 text-slate-300 transition" title="Kembali ke Dashboard">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- Konten Utama Kiosk (Tata Letak Seimbang di HP & Desktop) -->
+  <main class="flex-1 flex flex-col md:flex-row items-center justify-start md:justify-center px-4 py-5 sm:p-6 md:p-8 gap-6 md:gap-8 max-w-7xl mx-auto w-full">
+    
+    <!-- Kolom Kiri: Scanner Kamera QR Code -->
+    <div class="w-full md:w-1/2 flex flex-col items-center">
+      <div class="w-full max-w-sm sm:max-w-md bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
+        
+        <!-- Header Scanner & Status -->
+        <div class="flex flex-col gap-2.5 mb-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span id="cameraStatusDot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+              <span class="text-xs font-bold text-white tracking-wide uppercase">Scanner Kamera QR</span>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <!-- Tombol Balik Kamera (Depan/Belakang) -->
+              <button id="switchCameraBtn" type="button" class="hidden p-1.5 rounded-lg bg-slate-700/80 hover:bg-slate-600 text-slate-200 transition" title="Ganti Kamera Depan / Belakang">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              </button>
+              <!-- Tombol Toggle Live Video -->
+              <button id="toggleCameraBtn" type="button" class="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow">
+                <i data-lucide="video" class="w-3.5 h-3.5"></i>
+                <span>Nyalakan Kamera</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Pilihan Lensa Dropdown jika terdeteksi lebih dari 1 kamera -->
+          <div id="cameraSelectContainer" class="hidden flex items-center gap-2">
+            <label for="cameraSelect" class="text-[11px] text-slate-400 font-medium shrink-0">Pilih Lensa:</label>
+            <select id="cameraSelect" class="flex-1 text-[11px] bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 truncate"></select>
+          </div>
+
+          <!-- Diagnostic Status Bar di Layar Kiosk / HP -->
+          <div id="cameraStatusBanner" class="p-2 rounded-lg bg-slate-900/80 border border-slate-700/80 text-[11px] text-slate-300 flex items-center justify-between">
+            <span id="cameraStatusLog" class="truncate flex items-center gap-1.5 flex-1 mr-2">
+              <i data-lucide="info" class="w-3.5 h-3.5 text-blue-400 shrink-0"></i>
+              <span class="truncate">Kamera standby. Klik tombol atau tap layar di bawah.</span>
+            </span>
+            <span id="secureBadge" class="shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700"></span>
+          </div>
+        </div>
+
+        <!-- Kamera Viewfinder (Bisa Ditekan Langsung untuk Menyalakan Kamera) -->
+        <div class="relative w-full aspect-square max-h-[320px] sm:max-h-none bg-black rounded-xl overflow-hidden flex items-center justify-center border border-slate-700 cursor-pointer group" id="viewfinderWrapper">
+          <div id="qr-reader" class="w-full h-full"></div>
+
+          <!-- Placeholder saat kamera belum menyala -->
+          <div id="cameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-3 p-6 text-center bg-slate-900/90 backdrop-blur-sm transition select-none">
+            <div class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400 shadow-inner group-hover:scale-105 transition-transform">
+              <i data-lucide="qr-code" class="w-8 h-8 text-blue-400"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-white mb-0.5">Ketuk di Sini untuk Buka Kamera</p>
+              <p class="text-[11px] text-slate-400 max-w-[220px]">Arahkan QR Code Kartu Pelajar ke lensa kamera.</p>
+            </div>
+            <span class="text-[11px] px-3 py-1 rounded-full bg-blue-600/30 text-blue-300 border border-blue-500/40 font-semibold flex items-center gap-1">
+              <i data-lucide="play" class="w-3 h-3 fill-current"></i> Klik untuk Aktifkan
+            </span>
+          </div>
+
+          <!-- Laser Scan Line Animation saat kamera aktif -->
+          <div id="scanLaserLine" class="hidden absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_8px_rgba(52,211,153,0.9)] pointer-events-none animate-scan-laser"></div>
+        </div>
+
+        <!-- Tombol Alternatif: Buka Kamera Bawaan HP (Foto QR) -->
+        <div class="mt-3">
+          <button id="mobileCaptureBtn" type="button" class="w-full text-xs py-2 px-3 rounded-xl bg-slate-700/60 hover:bg-slate-700 border border-slate-600/70 text-slate-200 font-semibold flex items-center justify-center gap-2 transition shadow-sm">
+            <i data-lucide="camera" class="w-4 h-4 text-emerald-400"></i>
+            <span>Buka Kamera HP (Ambil Foto QR Kartu)</span>
+          </button>
+          <input type="file" id="mobileCameraInput" accept="image/*" capture="environment" class="hidden">
+        </div>
+
+        <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Reader RFID USB Standby
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Audio FX Aktif
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kolom Kanan: Instruksi & Input RFID Global Standby -->
+    <div class="w-full md:w-1/2 flex flex-col items-center md:items-start max-w-sm sm:max-w-md">
+      <div class="bg-slate-800/60 border border-slate-700 rounded-2xl p-5 sm:p-6 w-full shadow-xl">
+        <h2 class="text-lg sm:text-xl font-bold text-white mb-2 flex items-center gap-2">
+          <i data-lucide="scan-face" class="w-5 h-5 sm:w-6 sm:h-6 text-blue-400"></i>
+          Petunjuk Presensi
+        </h2>
+        <p class="text-xs text-slate-400 mb-4 sm:mb-6 leading-relaxed">
+          Silakan tempelkan kartu RFID ke mesin reader USB, atau tunjukkan QR Code pada Kartu Pelajar ke kamera.
+        </p>
+
+        <!-- Input Tersembunyi untuk RFID USB Keyboard Wedge -->
+        <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-3 flex items-center gap-3">
+          <i data-lucide="credit-card" class="w-5 h-5 text-emerald-400 animate-bounce"></i>
+          <input 
+            type="text" 
+            id="rfidInput" 
+            placeholder="Menunggu tap kartu RFID..." 
+            autocomplete="off"
+            autofocus
+            class="bg-transparent border-none text-sm text-emerald-400 font-mono focus:outline-none w-full"
+          >
+        </div>
+        <p class="text-[11px] text-slate-500 mt-2">
+          *Layar ini otomatis menangkap ketikan dari reader RFID USB tanpa perlu klik mouse.
+        </p>
+      </div>
+
+      <!-- Feed 3 Presensi Terakhir -->
+      <div class="w-full mt-4 sm:mt-6">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i data-lucide="history" class="w-3.5 h-3.5"></i>
+          Presensi Terkini Hari Ini
+        </h3>
+        <div id="recentScansList" class="space-y-2">
+          <div class="text-xs text-slate-500 italic">Belum ada aktivitas presensi sesi ini.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Pop-Up Hasil Presensi Siswa (Overlay) -->
+  <div id="resultModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+    <div id="resultCard" class="bg-slate-800 border border-slate-700 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center transform scale-95 transition-transform duration-300">
+      
+      <!-- Avatar Foto Siswa -->
+      <div class="relative w-24 h-24 mx-auto mb-4">
+        <img id="resPhoto" src="" alt="Foto Siswa" class="w-full h-full object-cover rounded-2xl border-2 border-slate-600 hidden">
+        <div id="resAvatarFallback" class="w-full h-full rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-3xl">
+          ?
+        </div>
+      </div>
+
+      <!-- Badge Status -->
+      <div id="resBadge" class="inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3">
+        Memproses...
+      </div>
+
+      <!-- Nama Siswa & Kelas -->
+      <h3 id="resName" class="text-2xl font-extrabold text-white leading-tight">Nama Siswa</h3>
+      <p id="resMeta" class="text-sm text-slate-400 mt-1">Kelas - &bull; NIS: -</p>
+
+      <!-- Pesan Keterangan & Jam -->
+      <div id="resMessage" class="mt-4 p-3 rounded-xl bg-slate-900/80 text-xs text-slate-300 font-medium">
+        Presensi berhasil dicatat.
+      </div>
+
+      <div class="mt-6 flex items-center justify-center gap-2 text-xs text-slate-500">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Notifikasi WhatsApp otomatis terkirim ke wali murid
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Kiosk -->
+  <footer class="bg-slate-800/50 border-t border-slate-800 px-6 py-3 text-center text-xs text-slate-500">
+    <%= settings.school_name || 'Sistem Absensi Sekolah' %> &bull; Kiosk Mode Standby
+  </footer>
+
+  <script>
+    // Inisialisasi Ikon Lucide
+    lucide.createIcons();
+
+    // 1. Live Digital Clock
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('liveClock').innerText = `${h}:${m}:${s}`;
+
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('liveDate').innerText = now.toLocaleDateString('id-ID', options);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 2. Web Audio API Synthesizer (Zero External Dependencies)
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playSound(type) {
+      try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'SUCCESS') {
+          // Harmonious High Two-tone Chime
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now); // D5
+          osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        } else if (type === 'WARNING') {
+          // Double Medium Tone
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.setValueAtTime(330, now + 0.15);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        } else {
+          // Low Buzz for Error / Not Found
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(160, now);
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        }
+      } catch (e) {
+        console.warn('Audio play error:', e);
+      }
+    }
+
+    // 3. RFID Input Listener Global
+    const rfidInput = document.getElementById('rfidInput');
+    let isProcessingScan = false;
+
+    // Pastikan input selalu fokus saat user menekan keyboard
+    window.addEventListener('click', () => {
+      rfidInput.focus();
+    });
+
+    rfidInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const code = rfidInput.value.trim();
+        rfidInput.value = '';
+        if (code && !isProcessingScan) {
+          processAttendance(code);
+        }
+      }
+    });
+
+    // 4. Integrasi HTML5 QR Code Scanner Kamera & Native Mobile Fallback
+    let html5QrCode = null;
+    let cameraRunning = false;
+    let availableCameras = [];
+    let currentFacingMode = 'environment'; // 'environment' (belakang) atau 'user' (depan)
+
+    const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+    const switchCameraBtn = document.getElementById('switchCameraBtn');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const cameraSelectContainer = document.getElementById('cameraSelectContainer');
+    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+    const viewfinderWrapper = document.getElementById('viewfinderWrapper');
+    const scanLaserLine = document.getElementById('scanLaserLine');
+    const cameraStatusDot = document.getElementById('cameraStatusDot');
+    const cameraStatusLog = document.getElementById('cameraStatusLog');
+    const secureBadge = document.getElementById('secureBadge');
+    const mobileCaptureBtn = document.getElementById('mobileCaptureBtn');
+    const mobileCameraInput = document.getElementById('mobileCameraInput');
+
+    // Cek protokol keamanan (HTTPS / Localhost)
+    const isHttps = location.protocol === 'https:';
+    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const isSecure = window.isSecureContext || isHttps || isLocalhost;
+
+    if (secureBadge) {
+      if (isHttps) {
+        secureBadge.innerText = 'HTTPS SECURE';
+        secureBadge.className = 'shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800';
+      } else if (isLocalhost) {
+        secureBadge.innerText = 'LOCALHOST';
+        secureBadge.className = 'shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800';
+      } else {
+        secureBadge.innerText = 'HTTP NON-SSL';
+        secureBadge.className = 'shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800';
+      }
+    }
+
+    // Helper untuk menampilkan status kamera di UI
+    function setCameraStatus(msg, type = 'info') {
+      if (!cameraStatusLog) return;
+      let icon = 'info';
+      let textColor = 'text-slate-300';
+
+      if (type === 'success') {
+        icon = 'check-circle';
+        textColor = 'text-emerald-400';
+        if (cameraStatusDot) cameraStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse';
+      } else if (type === 'error') {
+        icon = 'alert-triangle';
+        textColor = 'text-rose-400';
+        if (cameraStatusDot) cameraStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+      } else if (type === 'loading') {
+        icon = 'loader-2';
+        textColor = 'text-blue-400';
+        if (cameraStatusDot) cameraStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping';
+      } else {
+        if (cameraStatusDot) cameraStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+      }
+
+      cameraStatusLog.innerHTML = `
+        <i data-lucide="${icon}" class="w-3.5 h-3.5 shrink-0 ${textColor} ${type === 'loading' ? 'animate-spin' : ''}"></i>
+        <span class="${textColor} truncate">${msg}</span>
+      `;
+      lucide.createIcons();
+    }
+
+    function populateCameraSelect(devices) {
+      if (!cameraSelect || !devices || devices.length <= 1) {
+        if (cameraSelectContainer) cameraSelectContainer.classList.add('hidden');
+        return;
+      }
+      cameraSelect.innerHTML = devices.map((d, idx) => {
+        let label = d.label || `Lensa Kamera ${idx + 1}`;
+        return `<option value="${d.id}">${label}</option>`;
+      }).join('');
+      if (cameraSelectContainer) cameraSelectContainer.classList.remove('hidden');
+    }
+
+    async function loadCameraDevicesSilently() {
+      try {
+        if (typeof Html5Qrcode !== 'undefined') {
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 0) {
+            availableCameras = devices;
+            populateCameraSelect(devices);
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Observer untuk memastikan playsinline dan muted pada video yang diinject html5-qrcode
+    const qrContainer = document.getElementById('qr-reader');
+    if (qrContainer && window.MutationObserver) {
+      const observer = new MutationObserver(() => {
+        const v = qrContainer.querySelector('video');
+        if (v) {
+          v.setAttribute('playsinline', 'true');
+          v.setAttribute('webkit-playsinline', 'true');
+          v.muted = true;
+          v.play().catch(() => {});
+        }
+      });
+      observer.observe(qrContainer, { childList: true, subtree: true });
+    }
+
+    // Multi-stage Waterfall Camera Initializer
+    async function startCamera(silent = false) {
+      if (cameraRunning) return;
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraStatus('Browser membatasi live video (butuh HTTPS). Gunakan tombol foto HP.', 'error');
+        if (!silent) {
+          alert('Browser membatasi akses live video kamera karena halaman tidak dibuka melalui HTTPS atau Localhost.\n\nSilakan gunakan tombol "Buka Kamera HP (Ambil Foto QR Kartu)" di bawah.');
+        }
+        return;
+      }
+
+      setCameraStatus('Menghubungkan ke kamera...', 'loading');
+      toggleCameraBtn.disabled = true;
+
+      // Bersihkan instance sebelum memulai kembali
+      try {
+        if (html5QrCode) {
+          try { await html5QrCode.stop(); } catch(e) {}
+          try { await html5QrCode.clear(); } catch(e) {}
+        }
+      } catch(e) {}
+
+      html5QrCode = new Html5Qrcode("qr-reader");
+
+      // Scan config: TANPA aspectRatio agar tidak crash OverconstrainedError di smartphone
+      const scanConfig = {
+        fps: 15,
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const edge = Math.max(160, Math.floor(minEdge * 0.72));
+          return { width: edge, height: edge };
+        }
+      };
+
+      const onScanSuccess = (decodedText) => {
+        if (!isProcessingScan) {
+          processAttendance(decodedText);
+        }
+      };
+      const onScanFailure = () => {};
+
+      let started = false;
+      let startError = null;
+
+      // Tahap 1: Gunakan kamera dari dropdown jika dipilih pengguna
+      if (cameraSelect && cameraSelect.value) {
+        try {
+          await html5QrCode.start(cameraSelect.value, scanConfig, onScanSuccess, onScanFailure);
+          started = true;
+        } catch (err) {
+          console.warn('Tahap 1 (cameraSelect) gagal:', err);
+          startError = err;
+        }
+      }
+
+      // Tahap 2: Coba kamera belakang dengan facingMode: "environment" (string standar)
+      if (!started) {
+        try {
+          await html5QrCode.start({ facingMode: currentFacingMode }, scanConfig, onScanSuccess, onScanFailure);
+          started = true;
+        } catch (err) {
+          console.warn(`Tahap 2 (facingMode: ${currentFacingMode}) gagal:`, err);
+          startError = err;
+        }
+      }
+
+      // Tahap 3: Dapatkan daftar kamera via getCameras() dan cari kamera belakang (rear/back)
+      if (!started) {
+        try {
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 0) {
+            availableCameras = devices;
+            populateCameraSelect(devices);
+
+            const rearCam = devices.find(d => /back|rear|belakang|environment/i.test(d.label)) || devices[devices.length - 1];
+            await html5QrCode.start(rearCam.id, scanConfig, onScanSuccess, onScanFailure);
+            started = true;
+            if (cameraSelect) cameraSelect.value = rearCam.id;
+          }
+        } catch (err) {
+          console.warn('Tahap 3 (getCameras rear) gagal:', err);
+          startError = err;
+        }
+      }
+
+      // Tahap 4: Coba kebalikan facingMode (user / depan)
+      if (!started) {
+        const altMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        try {
+          await html5QrCode.start({ facingMode: altMode }, scanConfig, onScanSuccess, onScanFailure);
+          started = true;
+          currentFacingMode = altMode;
+        } catch (err) {
+          console.warn(`Tahap 4 (facingMode: ${altMode}) gagal:`, err);
+          startError = err;
+        }
+      }
+
+      // Tahap 5: Coba kamera pertama dari getCameras()
+      if (!started && availableCameras.length > 0) {
+        try {
+          await html5QrCode.start(availableCameras[0].id, scanConfig, onScanSuccess, onScanFailure);
+          started = true;
+          if (cameraSelect) cameraSelect.value = availableCameras[0].id;
+        } catch (err) {
+          console.warn('Tahap 5 (devices[0]) gagal:', err);
+          startError = err;
+        }
+      }
+
+      toggleCameraBtn.disabled = false;
+
+      if (started) {
+        cameraRunning = true;
+        cameraPlaceholder.classList.add('hidden');
+        scanLaserLine.classList.remove('hidden');
+
+        toggleCameraBtn.innerHTML = '<i data-lucide="video-off" class="w-3.5 h-3.5"></i><span>Matikan Kamera</span>';
+        toggleCameraBtn.className = 'text-xs px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold transition flex items-center gap-1.5 shadow';
+
+        if (switchCameraBtn) switchCameraBtn.classList.remove('hidden');
+
+        let camLabel = currentFacingMode === 'environment' ? 'Kamera Belakang' : 'Kamera Depan';
+        if (cameraSelect && cameraSelect.selectedOptions && cameraSelect.selectedOptions[0]) {
+          camLabel = cameraSelect.selectedOptions[0].text;
+        }
+        setCameraStatus(`Live Scanner Aktif (${camLabel})`, 'success');
+
+        // Pastikan video element playsinline & unmuted di iOS / Android
+        setTimeout(() => {
+          const videos = document.querySelectorAll('#qr-reader video');
+          videos.forEach(v => {
+            v.setAttribute('playsinline', 'true');
+            v.setAttribute('webkit-playsinline', 'true');
+            v.muted = true;
+            v.play().catch(() => {});
+          });
+        }, 300);
+
+        loadCameraDevicesSilently();
+
+      } else {
+        cameraRunning = false;
+        cameraPlaceholder.classList.remove('hidden');
+        scanLaserLine.classList.add('hidden');
+
+        toggleCameraBtn.innerHTML = '<i data-lucide="video" class="w-3.5 h-3.5"></i><span>Nyalakan Kamera</span>';
+        toggleCameraBtn.className = 'text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow';
+
+        const errDetail = startError ? (startError.message || String(startError)) : 'Kamera tidak merespons';
+        setCameraStatus('Gagal buka kamera: ' + errDetail, 'error');
+
+        if (!silent) {
+          const msgLow = errDetail.toLowerCase();
+          if (msgLow.includes('notallowed') || msgLow.includes('permission') || msgLow.includes('denied')) {
+            alert('Izin kamera ditolak oleh browser ponsel Anda.\n\nSilakan klik ikon gembok di address bar browser, ubah izin Kamera menjadi "Izinkan", lalu coba lagi.');
+          } else {
+            alert('Kamera belum dapat dibuka: ' + errDetail + '\n\nSilakan gunakan tombol "Buka Kamera HP (Ambil Foto QR Kartu)" di bawah.');
+          }
+        }
+      }
+      lucide.createIcons();
+    }
+
+    async function stopCamera() {
+      if (!cameraRunning) return;
+      toggleCameraBtn.disabled = true;
+
+      try {
+        if (html5QrCode) {
+          await html5QrCode.stop();
+          await html5QrCode.clear();
+        }
+      } catch (err) {
+        console.warn('Stop camera error:', err);
+      }
+
+      cameraRunning = false;
+      cameraPlaceholder.classList.remove('hidden');
+      scanLaserLine.classList.add('hidden');
+
+      toggleCameraBtn.innerHTML = '<i data-lucide="video" class="w-3.5 h-3.5"></i><span>Nyalakan Kamera</span>';
+      toggleCameraBtn.className = 'text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition flex items-center gap-1.5 shadow';
+      toggleCameraBtn.disabled = false;
+
+      setCameraStatus('Kamera standby. Klik tombol untuk menyalakan.', 'info');
+      lucide.createIcons();
+    }
+
+    // Tombol Toggle Kamera
+    toggleCameraBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!cameraRunning) {
+        startCamera(false);
+      } else {
+        stopCamera();
+      }
+    });
+
+    // Klik pada area Viewfinder saat kamera mati otomatis menyalakan kamera
+    if (viewfinderWrapper) {
+      viewfinderWrapper.addEventListener('click', () => {
+        if (!cameraRunning) {
+          startCamera(false);
+        }
+      });
+    }
+
+    // Tombol Ganti Kamera (Depan / Belakang)
+    if (switchCameraBtn) {
+      switchCameraBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!cameraRunning) return;
+        currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        if (cameraSelect) cameraSelect.value = '';
+        await stopCamera();
+        await startCamera(false);
+      });
+    }
+
+    // Event ganti lensa dari dropdown
+    if (cameraSelect) {
+      cameraSelect.addEventListener('change', async () => {
+        if (cameraRunning) {
+          await stopCamera();
+          await startCamera(false);
+        }
+      });
+    }
+
+    // Fallback Buka Kamera Bawaan HP (100% Berhasil di Semua Ponsel & OS)
+    mobileCaptureBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      mobileCameraInput.click();
+    });
+
+    mobileCameraInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setCameraStatus('Memindai QR Code dari foto...', 'loading');
+
+      try {
+        const fileScanner = new Html5Qrcode("qr-reader");
+        const decodedText = await fileScanner.scanFile(file, true);
+        setCameraStatus('QR Code terdeteksi!', 'success');
+        processAttendance(decodedText);
+      } catch (scanErr) {
+        setCameraStatus('QR Code tidak ditemukan pada foto.', 'error');
+        showResultModal({
+          success: false,
+          code: 'QR_NOT_DETECTED',
+          message: 'QR Code tidak terdeteksi pada foto. Pastikan foto QR code kartu tegak, jelas, dan tidak buram.'
+        });
+      } finally {
+        mobileCameraInput.value = '';
+        setTimeout(() => {
+          if (!cameraRunning) {
+            setCameraStatus('Standby. Silakan scan berikutnya.', 'info');
+          }
+        }, 3500);
+      }
+    });
+
+    // Coba nyalakan kamera secara otomatis saat halaman selesai dimuat (silent mode)
+    window.addEventListener('DOMContentLoaded', () => {
+      loadCameraDevicesSilently();
+      setTimeout(() => {
+        startCamera(true);
+      }, 600);
+    });
+
+    // 5. Proses Scan Presensi ke Server API
+    const resultModal = document.getElementById('resultModal');
+    const resultCard = document.getElementById('resultCard');
+    const resPhoto = document.getElementById('resPhoto');
+    const resAvatarFallback = document.getElementById('resAvatarFallback');
+    const resBadge = document.getElementById('resBadge');
+    const resName = document.getElementById('resName');
+    const resMeta = document.getElementById('resMeta');
+    const resMessage = document.getElementById('resMessage');
+    const recentScansList = document.getElementById('recentScansList');
+
+    const recentScans = [];
+
+    async function processAttendance(code) {
+      isProcessingScan = true;
+
+      try {
+        const response = await fetch('/api/attendance/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+
+        const data = await response.json();
+        showResultModal(data);
+
+        if (data.success && data.student) {
+          addRecentScan(data.student, data.status, data.timeIn);
+        }
+
+      } catch (err) {
+        showResultModal({
+          success: false,
+          code: 'NETWORK_ERROR',
+          message: 'Koneksi ke server gagal. Periksa jaringan.'
+        });
+      } finally {
+        setTimeout(() => {
+          isProcessingScan = false;
+          rfidInput.focus();
+        }, 1500);
+      }
+    }
+
+    // Tampilkan Modal Hasil Scan
+    let modalTimer = null;
+
+    function showResultModal(data) {
+      clearTimeout(modalTimer);
+
+      if (data.student) {
+        resName.innerText = data.student.name;
+        resMeta.innerText = `Kelas ${data.student.class_name || '-'} • NIS: ${data.student.nis}`;
+        if (data.student.photo) {
+          resPhoto.src = data.student.photo;
+          resPhoto.classList.remove('hidden');
+          resAvatarFallback.classList.add('hidden');
+        } else {
+          resAvatarFallback.innerText = data.student.name.charAt(0);
+          resAvatarFallback.classList.remove('hidden');
+          resPhoto.classList.add('hidden');
+        }
+      } else {
+        resName.innerText = 'Tidak Dikenal';
+        resMeta.innerText = 'Data tidak ditemukan';
+        resAvatarFallback.innerText = 'X';
+        resAvatarFallback.classList.remove('hidden');
+        resPhoto.classList.add('hidden');
+      }
+
+      resMessage.innerText = data.message;
+
+      // Konfigurasi Badge Warna & Audio
+      if (data.code === 'SUCCESS') {
+        if (data.status === 'HADIR') {
+          resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+          resBadge.innerText = '✓ HADIR TEPAT WAKTU';
+          playSound('SUCCESS');
+        } else {
+          resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-amber-500/20 text-amber-400 border border-amber-500/40';
+          resBadge.innerText = `⚠ TERLAMBAT (${data.lateMinutes} MENIT)`;
+          playSound('WARNING');
+        }
+      } else if (data.code === 'ALREADY_ATTENDED') {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-blue-500/20 text-blue-400 border border-blue-500/40';
+        resBadge.innerText = 'ℹ SUDAH ABSEN HARI INI';
+        playSound('WARNING');
+      } else {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-rose-500/20 text-rose-400 border border-rose-500/40';
+        resBadge.innerText = '✕ TIDAK TERDAFTAR';
+        playSound('ERROR');
+      }
+
+      // Animasi Buka Modal
+      resultModal.classList.remove('opacity-0', 'pointer-events-none');
+      resultCard.classList.remove('scale-95');
+      resultCard.classList.add('scale-100');
+
+      // Otomatis Tutup Modal Setelah 3.5 Detik
+      modalTimer = setTimeout(() => {
+        resultModal.classList.add('opacity-0', 'pointer-events-none');
+        resultCard.classList.add('scale-95');
+        resultCard.classList.remove('scale-100');
+      }, 3500);
+    }
+
+    // Tambahkan ke feed presensi terkini
+    function addRecentScan(student, status, timeIn) {
+      recentScans.unshift({ student, status, timeIn });
+      if (recentScans.length > 4) recentScans.pop();
+
+      recentScansList.innerHTML = recentScans.map(item => `
+        <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 flex items-center justify-between text-xs animate-fadeIn">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center">
+              ${item.student.name.charAt(0)}
+            </div>
+            <div>
+              <p class="font-bold text-white leading-tight">${item.student.name}</p>
+              <p class="text-[11px] text-slate-400">Kelas ${item.student.class_name || '-'}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="font-mono text-[11px] text-slate-300 font-semibold">${item.timeIn}</span>
+            <div>
+              <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded ${item.status === 'HADIR' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">
+                ${item.status}
+              </span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

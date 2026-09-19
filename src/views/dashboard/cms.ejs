@@ -1,0 +1,407 @@
+<%- include('../partials/header', { title: 'Pengaturan Sekolah & CMS Web', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">Pengaturan & CMS</h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">Kelola profil sekolah, foto banner, kepala sekolah, galeri, dan template</p>
+        </div>
+      </div>
+      <a href="/" target="_blank" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition shrink-0" title="Lihat Web Sekolah">
+        <i data-lucide="external-link" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+        <span class="hidden sm:inline sm:ml-1.5">Lihat Web Sekolah</span>
+      </a>
+    </header>
+
+    <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-5xl">
+      <% if (successMsg) { %>
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+          <span><%= successMsg %></span>
+        </div>
+      <% } %>
+      <% if (errorMsg) { %>
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
+          <span><%= errorMsg %></span>
+        </div>
+      <% } %>
+
+      <!-- 1. Profil Sekolah, Logo & Banner Hero -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="school" class="w-4 h-4 text-blue-600"></i>
+          Profil Sekolah, Logo & Foto Banner Utama
+        </h3>
+        <p class="text-xs text-slate-500 mb-5">
+          Atur identitas resmi sekolah, logo transparan, dan foto banner latar belakang hero di halaman beranda.
+        </p>
+
+        <form action="/dashboard/cms/profile" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Upload Logo -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
+              <div class="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 overflow-hidden shadow-sm flex-shrink-0">
+                <% if (settings.school_logo) { %>
+                  <img src="<%= settings.school_logo %>" alt="Logo" class="w-full h-full object-contain">
+                <% } else { %>
+                  <i data-lucide="image" class="w-6 h-6 text-slate-400"></i>
+                <% } %>
+              </div>
+              <div class="flex-1 min-w-0">
+                <label class="block font-semibold text-slate-700 mb-1">Logo Sekolah</label>
+                <input type="file" name="school_logo" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+              </div>
+            </div>
+
+            <!-- Upload Banner Hero -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
+              <div class="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 overflow-hidden shadow-sm flex-shrink-0">
+                <% if (settings.school_hero_image) { %>
+                  <img src="<%= settings.school_hero_image %>" alt="Banner" class="w-full h-full object-cover">
+                <% } else { %>
+                  <i data-lucide="image" class="w-6 h-6 text-slate-400"></i>
+                <% } %>
+              </div>
+              <div class="flex-1 min-w-0">
+                <label class="block font-semibold text-slate-700 mb-1">Foto Banner Hero (Latar Belakang)</label>
+                <input type="file" name="school_hero_image" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Sekolah *</label>
+              <input type="text" name="school_name" value="<%= settings.school_name || '' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Akreditasi</label>
+              <input type="text" name="school_accreditation" value="<%= settings.school_accreditation || 'Terakreditasi A (Unggul)' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Slogan / Tagline Sekolah</label>
+            <input type="text" name="school_tagline" value="<%= settings.school_tagline || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Deskripsi Singkat Sekolah</label>
+            <textarea name="school_description" rows="2" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"><%= settings.school_description || '' %></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Alamat Sekolah</label>
+              <input type="text" name="school_address" value="<%= settings.school_address || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nomor Telepon</label>
+              <input type="text" name="school_phone" value="<%= settings.school_phone || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Email Sekolah</label>
+              <input type="email" name="school_email" value="<%= settings.school_email || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Profil & Banner
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 2. Sambutan & Foto Kepala Sekolah -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="user-check" class="w-4 h-4 text-blue-600"></i>
+          Sambutan & Foto Kepala Sekolah
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Tampilkan salam pembuka resmi dari Kepala Sekolah kepada wali murid dan masyarakat.
+        </p>
+
+        <form action="/dashboard/cms/principal" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+          <div class="flex flex-col sm:flex-row items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="w-16 h-20 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0">
+              <% if (settings.school_principal_photo) { %>
+                <img src="<%= settings.school_principal_photo %>" alt="Kepala Sekolah" class="w-full h-full object-cover">
+              <% } else { %>
+                <i data-lucide="user" class="w-8 h-8 text-slate-400"></i>
+              <% } %>
+            </div>
+            <div class="flex-1 w-full">
+              <label class="block font-semibold text-slate-700 mb-1">Foto Kepala Sekolah (Rasio Portrait 3:4)</label>
+              <input type="file" name="school_principal_photo" accept="image/*" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar Kepala Sekolah</label>
+            <input type="text" name="school_principal_name" value="<%= settings.school_principal_name || 'Drs. H. Mulyadi, M.Pd' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Teks Sambutan Kepala Sekolah</label>
+            <textarea name="school_principal_welcome" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.school_principal_welcome || '' %></textarea>
+          </div>
+
+          <div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Sambutan Kepala Sekolah
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 3. Visi, Misi & Statistik Sekolah -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="compass" class="w-4 h-4 text-blue-600"></i>
+          Visi, Misi & Angka Statistik Sekolah
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Paparkan arah tujuan pendidikan serta indikator keunggulan sekolah.
+        </p>
+
+        <form action="/dashboard/cms/vision-mission" method="POST" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Visi Sekolah</label>
+            <textarea name="school_vision" rows="2" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium"><%= settings.school_vision || '' %></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Misi Sekolah (Pisahkan per baris)</label>
+            <textarea name="school_mission" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.school_mission || '' %></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Jumlah Guru & Staf (Opsional)</label>
+              <input type="text" name="school_stats_teachers" placeholder="Otomatis dihitung dari database jika kosong" value="<%= settings.school_stats_teachers || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <p class="text-[11px] text-slate-400 mt-1">Biarkan kosong agar otomatis sinkron dengan jumlah guru/staf di database.</p>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tingkat Kelulusan / Prestasi</label>
+              <input type="text" name="school_stats_graduates" value="<%= settings.school_stats_graduates || '100% Lulusan' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+            </div>
+          </div>
+
+          <div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Visi, Misi & Statistik
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 4. Galeri Foto Kegiatan & Fasilitas Sekolah -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="images" class="w-4 h-4 text-blue-600"></i>
+          Galeri Foto Kegiatan, Fasilitas & Prestasi Sekolah
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Unggah dokumentasi foto fasilitas sekolah, ekstrakurikuler, dan kegiatan siswa untuk dipamerkan di halaman depan.
+        </p>
+
+        <!-- Form Tambah Foto Galeri -->
+        <form action="/dashboard/cms/gallery" method="POST" enctype="multipart/form-data" class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3 text-xs mb-6">
+          <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+            Tambah Foto Baru ke Galeri
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Judul / Nama Dokumentasi *</label>
+              <input type="text" name="title" required placeholder="Contoh: Upacara Hari Kemerdekaan" class="w-full p-2 bg-white border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Kategori</label>
+              <select name="category" class="w-full p-2 bg-white border border-slate-200 rounded-lg">
+                <option value="Fasilitas">Fasilitas Sekolah</option>
+                <option value="Kegiatan">Kegiatan Siswa</option>
+                <option value="Prestasi">Prestasi & Lomba</option>
+                <option value="Akademik">Akademik</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Pilih File Gambar</label>
+              <input type="file" name="gallery_photo" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Keterangan / Deskripsi Singkat</label>
+            <input type="text" name="description" placeholder="Deskripsi singkat dokumentasi..." class="w-full p-2 bg-white border border-slate-200 rounded-lg">
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Unggah Foto ke Galeri
+            </button>
+          </div>
+        </form>
+
+        <!-- Daftar Foto Galeri yang Tersedia -->
+        <h4 class="font-bold text-slate-800 text-xs mb-3">Foto yang Sedang Ditampilkan (<%= gallery.length %> Foto)</h4>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <% gallery.forEach(item => { %>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden flex flex-col justify-between">
+              <div class="relative w-full aspect-video bg-slate-200 overflow-hidden">
+                <% if (item.image_url) { %>
+                  <img src="<%= item.image_url %>" alt="<%= item.title %>" class="w-full h-full object-cover">
+                <% } else { %>
+                  <div class="w-full h-full flex items-center justify-center text-slate-400">
+                    <i data-lucide="image" class="w-6 h-6"></i>
+                  </div>
+                <% } %>
+                <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900/80 text-white">
+                  <%= item.category %>
+                </span>
+              </div>
+              <div class="p-3">
+                <p class="font-bold text-slate-900 text-xs truncate"><%= item.title %></p>
+                <div class="mt-2 pt-2 border-t border-slate-200 flex justify-end">
+                  <form action="/dashboard/cms/gallery/<%= item.id %>/delete" method="POST" onsubmit="return confirm('Hapus foto ini dari galeri?')">
+                    <button type="submit" class="text-[11px] font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1">
+                      <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      <span>Hapus</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- 5. Pengumuman Landing Page -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="megaphone" class="w-4 h-4 text-blue-600"></i>
+          Papan Pengumuman Sekolah
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Pengumuman ini tampil di bagian bawah halaman web untuk dibaca oleh seluruh wali murid.
+        </p>
+
+        <form action="/dashboard/cms/announcement" method="POST" class="space-y-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Judul Pengumuman</label>
+            <input type="text" name="announcement_title" value="<%= settings.announcement_title || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Isi Pesan Pengumuman</label>
+            <textarea name="announcement_content" rows="3" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.announcement_content || '' %></textarea>
+          </div>
+          <div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Pengumuman
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 6. Jadwal Operasional & Jam Masuk Absensi -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i>
+          Jadwal Jam Masuk & Batas Keterlambatan
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Tentukan jam masuk sekolah dan batas toleransi sebelum siswa dicatat berstatus terlambat.
+        </p>
+
+        <form action="/dashboard/cms/schedule" method="POST" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Jam Masuk (WIB)</label>
+              <input type="time" name="jam_masuk" value="<%= settings.jam_masuk || '07:00' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Batas Toleransi Telat (WIB)</label>
+              <input type="time" name="toleransi_telat" value="<%= settings.toleransi_telat || '07:15' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Jam Cutoff Alpa / Broadcast (WIB)</label>
+              <input type="time" name="jam_cutoff_alpa" value="<%= settings.jam_cutoff_alpa || '07:30' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+            </div>
+          </div>
+          <div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Jadwal Jam Masuk
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 7. Konfigurasi & Template Pesan WhatsApp -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
+          <i data-lucide="message-square" class="w-4 h-4 text-emerald-600"></i>
+          Template Pesan WhatsApp Otomatis
+        </h3>
+        <p class="text-xs text-slate-500 mb-4">
+          Atur teks notifikasi yang akan dikirimkan oleh bot WhatsApp Baileys.
+        </p>
+
+        <form action="/dashboard/cms/whatsapp" method="POST" class="space-y-4 text-xs">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-bold text-slate-800">Aktifkan Notifikasi WhatsApp Otomatis</span>
+              <p class="text-[11px] text-slate-500">Jika dinonaktifkan, pesan tidak akan dikirim ke antrean.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="wa_enabled" value="1" <%= settings.wa_enabled === '1' ? 'checked' : '' %> class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+            </label>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              1. Template Notifikasi Presensi Masuk
+            </label>
+            <textarea name="wa_template_absen" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_absen || '' %></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              2. Template Pesan Pengenalan Kontak & Verifikasi "YA"
+            </label>
+            <textarea name="wa_template_intro" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_intro || '' %></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              3. Template Peringatan Siswa Belum Hadir (Alpa)
+            </label>
+            <textarea name="wa_template_alpa" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_alpa || '' %></textarea>
+          </div>
+
+          <div>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition">
+              Simpan Pengaturan WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<%- include('../partials/footer', { isDashboard: true }) %>

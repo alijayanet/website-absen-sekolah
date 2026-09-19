@@ -1,0 +1,125 @@
+<!-- Mobile Backdrop Overlay -->
+<div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 hidden md:hidden transition-opacity"></div>
+
+<!-- Sidebar Navigation -->
+<aside id="dashboardSidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 flex flex-col justify-between h-screen border-r border-slate-800 flex-shrink-0 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 md:static md:z-20 overflow-y-auto">
+  <div>
+    <!-- Logo & Brand Header -->
+    <div class="h-16 px-5 flex items-center justify-between border-b border-slate-800">
+      <div class="flex items-center gap-3 min-w-0">
+        <% if (settings.school_logo) { %>
+          <img src="<%= settings.school_logo %>" alt="Logo" class="w-8 h-8 object-contain rounded flex-shrink-0">
+        <% } else { %>
+          <div class="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+            <%= (settings.school_name || 'S').charAt(0) %>
+          </div>
+        <% } %>
+        <div class="truncate">
+          <h2 class="font-bold text-white text-sm truncate"><%= settings.school_name || 'Absensi Sekolah' %></h2>
+          <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            <%= currentUser.role === 'admin' ? 'Administrator' : 'Guru / Wali Kelas' %>
+          </p>
+        </div>
+      </div>
+
+      <!-- Tombol Tutup Sidebar untuk Tampilan HP/Mobile -->
+      <button type="button" onclick="toggleSidebar()" class="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Tutup Menu">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="px-3 py-4 space-y-1">
+      <a href="/dashboard" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath === '/dashboard' ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Ringkasan Dashboard</span>
+      </a>
+
+      <a href="/dashboard/students" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath.startsWith('/dashboard/students') ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>Data Siswa & Kontak</span>
+      </a>
+
+      <a href="/dashboard/classes" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath.startsWith('/dashboard/classes') ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <i data-lucide="folder-tree" class="w-4 h-4"></i>
+        <span>Data Rombel / Kelas</span>
+      </a>
+
+      <a href="/dashboard/attendances" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath.startsWith('/dashboard/attendances') ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+        <span>Rekap Presensi & Alpa</span>
+      </a>
+
+      <% if (currentUser.role === 'admin') { %>
+        <div class="pt-3 pb-1 px-3">
+          <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sistem & Pendidik</p>
+        </div>
+
+        <a href="/dashboard/teachers" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath.startsWith('/dashboard/teachers') ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+          <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+          <span>Data Guru & Wali Kelas</span>
+        </a>
+
+        <a href="/dashboard/cms" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath === '/dashboard/cms' ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+          <span>Pengaturan & CMS</span>
+        </a>
+
+        <a href="/dashboard/whatsapp" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath === '/dashboard/whatsapp' ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+          <i data-lucide="message-circle" class="w-4 h-4"></i>
+          <span>WhatsApp Baileys</span>
+        </a>
+      <% } %>
+
+      <div class="pt-3 pb-1 px-3">
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Akses Langsung</p>
+      </div>
+
+      <a href="/kiosk" target="_blank" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-emerald-400 hover:bg-slate-800 transition">
+        <i data-lucide="scan" class="w-4 h-4 text-emerald-400"></i>
+        <span>Buka Scanner Gerbang</span>
+        <i data-lucide="external-link" class="w-3 h-3 ml-auto text-slate-500"></i>
+      </a>
+
+      <a href="/" target="_blank" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 transition">
+        <i data-lucide="globe" class="w-4 h-4"></i>
+        <span>Halaman Beranda</span>
+        <i data-lucide="external-link" class="w-3 h-3 ml-auto text-slate-500"></i>
+      </a>
+    </nav>
+  </div>
+
+  <!-- User Info & Logout Button -->
+  <div class="p-3 border-t border-slate-800 bg-slate-950/40">
+    <div class="flex items-center justify-between p-2 rounded-lg">
+      <div class="flex items-center gap-2.5 truncate">
+        <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+          <%= currentUser.name.charAt(0) %>
+        </div>
+        <div class="truncate">
+          <p class="text-xs font-bold text-white truncate"><%= currentUser.name %></p>
+          <p class="text-[10px] text-slate-400 truncate">@<%= currentUser.username %></p>
+        </div>
+      </div>
+      <a href="/logout" class="p-1.5 rounded-md hover:bg-rose-950 text-slate-400 hover:text-rose-400 transition" title="Keluar">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+      </a>
+    </div>
+  </div>
+</aside>
+
+<script>
+  function toggleSidebar() {
+    const sidebar = document.getElementById('dashboardSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (!sidebar) return;
+    const isClosed = sidebar.classList.contains('-translate-x-full');
+    if (isClosed) {
+      sidebar.classList.remove('-translate-x-full');
+      if (backdrop) backdrop.classList.remove('hidden');
+    } else {
+      sidebar.classList.add('-translate-x-full');
+      if (backdrop) backdrop.classList.add('hidden');
+    }
+  }
+</script>

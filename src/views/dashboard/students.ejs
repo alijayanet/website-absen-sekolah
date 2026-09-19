@@ -1,0 +1,622 @@
+<%- include('../partials/header', { title: 'Manajemen Data Siswa', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">Data Siswa</h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">Manajemen siswa, cetak kartu pelajar, dan verifikasi WhatsApp</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- Tombol Cetak Semua Kartu Sesuai Filter / Seluruh Siswa -->
+        <a href="/dashboard/students/cards/all<%= (query.class_id || query.q || query.wa_status) ? '?' + new URLSearchParams(query).toString() : '' %>" target="_blank" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shadow-sm transition" title="Cetak Semua Kartu Pelajar (<%= students.length %>)">
+          <i data-lucide="printer" class="w-4 h-4 sm:w-3.5 sm:h-3.5 text-emerald-400"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Cetak Semua (<%= students.length %>)</span>
+        </a>
+
+        <button onclick="openModal('addStudentModal')" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition" title="Tambah Siswa Baru">
+          <i data-lucide="user-plus" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Tambah Siswa</span>
+        </button>
+
+        <button onclick="openModal('importExcelModal')" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition" title="Import Data dari Excel">
+          <i data-lucide="file-up" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Import Excel</span>
+        </button>
+
+        <a href="/dashboard/students/export/excel<%= query.class_id ? '?class_id=' + query.class_id : '' %>" class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-200" title="Export Excel">
+          <i data-lucide="download" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Export</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="p-4 sm:p-6 space-y-4 max-w-7xl">
+      <% if (successMsg) { %>
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+          <span><%= successMsg %></span>
+        </div>
+      <% } %>
+      <% if (errorMsg) { %>
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
+          <span><%= errorMsg %></span>
+        </div>
+      <% } %>
+
+      <% if (currentUser && currentUser.role === 'guru') { %>
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="graduation-cap" class="w-4 h-4 text-blue-600"></i>
+            <span>Mode Wali Kelas: Menampilkan siswa kelas <strong><%= currentUser.class_name || 'Binaan' %></strong></span>
+          </div>
+          <span class="bg-blue-200/70 text-blue-900 px-2.5 py-0.5 rounded-full text-[11px] font-bold">Wali Kelas</span>
+        </div>
+      <% } %>
+
+      <!-- Filter Bar & Onboarding Batch Button -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        <form action="/dashboard/students" method="GET" class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <!-- Search -->
+          <div class="relative w-full sm:w-60">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+            <input 
+              type="text" 
+              name="q" 
+              value="<%= query.q %>" 
+              placeholder="Cari nama, NIS, RFID..." 
+              class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+          </div>
+
+          <!-- Filter Kelas (Hanya jika Admin) -->
+          <% if (currentUser && currentUser.role !== 'guru') { %>
+          <select name="class_id" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none">
+            <option value="">Semua Kelas</option>
+            <% classes.forEach(c => { %>
+              <option value="<%= c.id %>" <%= query.class_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+            <% }) %>
+          </select>
+          <% } %>
+
+          <!-- Filter Status WA -->
+          <select name="wa_status" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none">
+            <option value="">Semua Status WA</option>
+            <option value="confirmed" <%= query.wa_status === 'confirmed' ? 'selected' : '' %>>Terverifikasi (Confirmed)</option>
+            <option value="intro_sent" <%= query.wa_status === 'intro_sent' ? 'selected' : '' %>>Menunggu Balas YA</option>
+            <option value="unverified" <%= query.wa_status === 'unverified' ? 'selected' : '' %>>Belum Dikirim</option>
+          </select>
+
+          <button type="submit" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold">
+            Filter
+          </button>
+          <% if (query.q || query.class_id || query.wa_status) { %>
+            <a href="/dashboard/students" class="text-xs text-slate-500 hover:text-slate-700 px-2 py-1">Reset</a>
+          <% } %>
+        </form>
+
+        <!-- Batch Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <!-- Tombol Cetak Cepat Sesuai Pilihan / Semua -->
+          <button type="button" onclick="printSelectedOrAll()" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold whitespace-nowrap transition">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            <span id="quickPrintBtnText">Cetak Kartu (<%= students.length %>)</span>
+          </button>
+
+          <!-- Batch WhatsApp Onboarding Button -->
+          <button type="button" onclick="triggerBatchIntro()" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold whitespace-nowrap transition">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span>Kirim Pesan Pengenalan WA</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Table Siswa -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <th class="px-3 py-3 w-10 text-center">
+                  <input type="checkbox" id="selectAllCheckbox" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer" title="Pilih Semua Siswa">
+                </th>
+                <th class="px-4 py-3">Foto</th>
+                <th class="px-4 py-3">NIS & RFID</th>
+                <th class="px-4 py-3">Nama Lengkap</th>
+                <th class="px-4 py-3">Kelas</th>
+                <th class="px-4 py-3">Wali Murid & No WA</th>
+                <th class="px-4 py-3">Status Verifikasi WA</th>
+                <th class="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (students.length === 0) { %>
+                <tr>
+                  <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+                    Tidak ada data siswa yang cocok.
+                  </td>
+                </tr>
+              <% } %>
+              <% students.forEach(s => { %>
+                <tr class="hover:bg-slate-50/50 transition">
+                  <td class="px-3 py-3 text-center">
+                    <input type="checkbox" name="selected_students" value="<%= s.id %>" class="student-checkbox w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer">
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <% if (s.photo) { %>
+                      <img src="<%= s.photo %>" class="w-9 h-9 rounded-lg object-cover border border-slate-200">
+                    <% } else { %>
+                      <div class="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 font-bold flex items-center justify-center text-xs">
+                        <%= s.name.charAt(0) %>
+                      </div>
+                    <% } %>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap font-mono text-slate-600">
+                    <div class="font-bold text-slate-800"><%= s.nis %></div>
+                    <div class="text-[11px] text-slate-400">RFID: <%= s.rfid_uid || '-' %></div>
+                  </td>
+                  <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">
+                    <div><%= s.name %></div>
+                    <div class="text-[11px] font-normal text-slate-400">NISN: <%= s.nisn || '-' %> &bull; <%= s.gender === 'P' ? 'Perempuan' : 'Laki-laki' %></div>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">
+                      <%= s.class_name || '-' %>
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <div class="font-medium text-slate-800"><%= s.parent_name || '-' %></div>
+                    <div class="font-mono text-[11px] text-slate-500"><%= s.parent_phone || '-' %></div>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    <% if (s.wa_status === 'confirmed') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Terverifikasi (YA)
+                      </span>
+                    <% } else if (s.wa_status === 'intro_sent') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Menunggu Balasan YA
+                      </span>
+                    <% } else { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Belum Dikirim
+                      </span>
+                    <% } %>
+                  </td>
+                  <td class="px-4 py-3 whitespace-nowrap text-right space-x-1">
+                    <!-- Tombol Kirim Intro WA -->
+                    <% if (s.parent_phone) { %>
+                      <button onclick="sendSingleIntro(<%= s.id %>, '<%= s.name %>')" class="p-1.5 rounded-md hover:bg-indigo-50 text-indigo-600 transition" title="Kirim Pesan Pengenalan WA (Minta Simpan & Balas YA)">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                      </button>
+                    <% } %>
+
+                    <!-- Cetak ID Card -->
+                    <a href="/dashboard/students/<%= s.id %>/card" target="_blank" class="inline-block p-1.5 rounded-md hover:bg-slate-100 text-slate-600 transition" title="Cetak Kartu Pelajar">
+                      <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    </a>
+
+                    <!-- Edit -->
+                    <button onclick='openEditModal(<%- JSON.stringify(s) %>)' class="p-1.5 rounded-md hover:bg-blue-50 text-blue-600 transition" title="Edit">
+                      <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                    </button>
+
+                    <!-- Hapus -->
+                    <form action="/dashboard/students/<%= s.id %>/delete" method="POST" class="inline-block" onsubmit="return confirm('Hapus siswa <%= s.name %>? Data absensi terkait juga akan terhapus.')">
+                      <button type="submit" class="p-1.5 rounded-md hover:bg-rose-50 text-rose-600 transition" title="Hapus">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Action Bar saat ada siswa yang dicentang -->
+    <div id="selectionActionBar" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 transition-all duration-300 transform translate-y-28 opacity-0 pointer-events-none">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+        <span class="text-xs font-bold text-white whitespace-nowrap"><span id="selectedCountText">0</span> siswa dipilih</span>
+      </div>
+      <div class="h-4 w-[1px] bg-slate-700"></div>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="printSelectedCards()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition whitespace-nowrap">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span>Cetak Kartu Terpilih</span>
+        </button>
+        <button type="button" onclick="sendSelectedIntro()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow transition whitespace-nowrap">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span>Kirim WA Terpilih</span>
+        </button>
+        <button type="button" onclick="deselectAll()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">
+          Batal
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Tambah Siswa -->
+<div id="addStudentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900 text-sm">Tambah Data Siswa Baru</h3>
+      <button onclick="closeModal('addStudentModal')" class="text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <form action="/dashboard/students" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3 text-xs">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">NIS *</label>
+          <input type="text" name="nis" required placeholder="Contoh: 1004" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">NISN</label>
+          <input type="text" name="nisn" placeholder="10 Digit NISN" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">UID Kartu RFID (Opsional)</label>
+          <input type="text" name="rfid_uid" placeholder="Tap pada reader..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Kelas *</label>
+          <% if (currentUser && currentUser.role === 'guru') { %>
+            <input type="hidden" name="class_id" value="<%= currentUser.class_id %>">
+            <input type="text" disabled value="<%= currentUser.class_name || 'Kelas Binaan' %>" class="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-600 cursor-not-allowed font-medium">
+          <% } else { %>
+            <select name="class_id" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <% classes.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.name %></option>
+              <% }) %>
+            </select>
+          <% } %>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap Siswa *</label>
+        <input type="text" name="name" required placeholder="Nama lengkap siswa..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Jenis Kelamin</label>
+        <div class="flex gap-4 pt-1">
+          <label class="flex items-center gap-1.5"><input type="radio" name="gender" value="L" checked> Laki-laki</label>
+          <label class="flex items-center gap-1.5"><input type="radio" name="gender" value="P"> Perempuan</label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nama Wali Murid</label>
+          <input type="text" name="parent_name" placeholder="Bapak/Ibu..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nomor WhatsApp Wali</label>
+          <input type="text" name="parent_phone" placeholder="081234567890" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Foto Siswa (Untuk Kartu Pelajar)</label>
+        <input type="file" name="photo" accept="image/*" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600">
+      </div>
+
+      <div class="pt-3 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('addStudentModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold">Batal</button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">Simpan Siswa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Edit Siswa -->
+<div id="editStudentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900 text-sm">Edit Data Siswa</h3>
+      <button onclick="closeModal('editStudentModal')" class="text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <form id="editStudentForm" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3 text-xs">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">NIS *</label>
+          <input type="text" id="edit_nis" name="nis" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">NISN</label>
+          <input type="text" id="edit_nisn" name="nisn" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">UID Kartu RFID</label>
+          <input type="text" id="edit_rfid" name="rfid_uid" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Kelas *</label>
+          <% if (currentUser && currentUser.role === 'guru') { %>
+            <input type="hidden" id="edit_class_id" name="class_id" value="<%= currentUser.class_id %>">
+            <input type="text" disabled value="<%= currentUser.class_name || 'Kelas Binaan' %>" class="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-600 cursor-not-allowed font-medium">
+          <% } else { %>
+            <select id="edit_class_id" name="class_id" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <% classes.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.name %></option>
+              <% }) %>
+            </select>
+          <% } %>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap Siswa *</label>
+        <input type="text" id="edit_name" name="name" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Jenis Kelamin</label>
+        <div class="flex gap-4 pt-1">
+          <label class="flex items-center gap-1.5"><input type="radio" id="edit_gender_l" name="gender" value="L"> Laki-laki</label>
+          <label class="flex items-center gap-1.5"><input type="radio" id="edit_gender_p" name="gender" value="P"> Perempuan</label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nama Wali Murid</label>
+          <input type="text" id="edit_parent_name" name="parent_name" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Nomor WhatsApp Wali</label>
+          <input type="text" id="edit_parent_phone" name="parent_phone" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Ganti Foto Siswa (Biarkan kosong jika tidak diubah)</label>
+        <input type="file" name="photo" accept="image/*" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600">
+      </div>
+
+      <div class="pt-3 flex justify-end gap-2">
+        <button type="button" onclick="closeModal('editStudentModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold">Batal</button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold">Perbarui Data</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Import Excel -->
+<div id="importExcelModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+      <h3 class="font-bold text-slate-900 text-sm">Import Data Siswa dari Excel (.xlsx)</h3>
+      <button onclick="closeModal('importExcelModal')" class="text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs space-y-1">
+      <p class="font-bold">Format Kolom Excel yang Didukung:</p>
+      <p class="font-mono text-[11px] text-blue-700">NIS | Nama Siswa | Kelas | NISN | UID RFID | L/P | Nama Wali | No WA Wali</p>
+    </div>
+
+    <form action="/dashboard/students/import/excel" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">Pilih File Excel (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx, .xls" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal('importExcelModal')" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold">Batal</button>
+        <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold">Mulai Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('hidden');
+    m.classList.add('flex');
+  }
+
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    m.classList.add('hidden');
+    m.classList.remove('flex');
+  }
+
+  function openEditModal(student) {
+    document.getElementById('editStudentForm').action = `/dashboard/students/${student.id}/edit`;
+    document.getElementById('edit_nis').value = student.nis;
+    document.getElementById('edit_nisn').value = student.nisn || '';
+    document.getElementById('edit_rfid').value = student.rfid_uid || '';
+    document.getElementById('edit_name').value = student.name;
+    document.getElementById('edit_class_id').value = student.class_id;
+    document.getElementById('edit_parent_name').value = student.parent_name || '';
+    document.getElementById('edit_parent_phone').value = student.parent_phone || '';
+
+    if (student.gender === 'P') {
+      document.getElementById('edit_gender_p').checked = true;
+    } else {
+      document.getElementById('edit_gender_l').checked = true;
+    }
+
+    openModal('editStudentModal');
+  }
+
+  async function sendSingleIntro(studentId, studentName) {
+    if (!confirm(`Kirim pesan perkenalan & ajakan verifikasi 'YA' ke nomor wali murid ${studentName}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/dashboard/students/${studentId}/send-intro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      alert(data.message);
+      location.reload();
+    } catch (e) {
+      alert('Gagal mengirim pesan: ' + e.message);
+    }
+  }
+
+  async function triggerBatchIntro() {
+    const classId = prompt('Kirim pesan pengenalan ke siswa yang BELUM TERVERIFIKASI.\n\nKetik ID Kelas jika ingin per kelas tertentu, atau kosongkan untuk SEMUA KELAS:');
+    if (classId === null) return;
+
+    try {
+      const res = await fetch('/dashboard/students/batch-send-intro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_id: classId.trim() || null })
+      });
+      const data = await res.json();
+      alert(data.message);
+      location.reload();
+    } catch (e) {
+      alert('Gagal: ' + e.message);
+    }
+  }
+
+  // Manajemen Checkbox & Batch Cetak Kartu / WA
+  const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+  const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+  const selectionActionBar = document.getElementById('selectionActionBar');
+  const selectedCountText = document.getElementById('selectedCountText');
+  const quickPrintBtnText = document.getElementById('quickPrintBtnText');
+
+  function getSelectedStudentIds() {
+    return Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+  }
+
+  function updateSelectionUI() {
+    const selected = getSelectedStudentIds();
+    const count = selected.length;
+    if (selectedCountText) selectedCountText.innerText = count;
+
+    if (quickPrintBtnText) {
+      if (count > 0) {
+        quickPrintBtnText.innerText = `Cetak Kartu Terpilih (${count})`;
+      } else {
+        quickPrintBtnText.innerText = `Cetak Kartu (<%= students.length %>)`;
+      }
+    }
+
+    if (selectionActionBar) {
+      if (count > 0) {
+        selectionActionBar.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+        selectionActionBar.classList.add('translate-y-0', 'opacity-100');
+      } else {
+        selectionActionBar.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+        selectionActionBar.classList.remove('translate-y-0', 'opacity-100');
+      }
+    }
+
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = count > 0 && count === studentCheckboxes.length;
+      selectAllCheckbox.indeterminate = count > 0 && count < studentCheckboxes.length;
+    }
+  }
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', () => {
+      studentCheckboxes.forEach(cb => {
+        cb.checked = selectAllCheckbox.checked;
+      });
+      updateSelectionUI();
+    });
+  }
+
+  studentCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateSelectionUI);
+  });
+
+  function deselectAll() {
+    if (selectAllCheckbox) selectAllCheckbox.checked = false;
+    studentCheckboxes.forEach(cb => { cb.checked = false; });
+    updateSelectionUI();
+  }
+
+  // Cetak kartu siswa yang dicentang
+  function printSelectedCards() {
+    const selected = getSelectedStudentIds();
+    if (selected.length === 0) {
+      alert('Silakan pilih minimal 1 siswa dengan mencentang checkbox untuk mencetak kartu.');
+      return;
+    }
+    window.open(`/dashboard/students/cards/selected?ids=${selected.join(',')}`, '_blank');
+  }
+
+  // Cetak semua kartu siswa (sesuai filter aktif)
+  function printAllCards() {
+    const urlParams = new URLSearchParams(window.location.search);
+    window.open(`/dashboard/students/cards/all?${urlParams.toString()}`, '_blank');
+  }
+
+  // Tombol aksi pintar: jika ada yang dicentang cetak terpilih, jika tidak ada cetak semua
+  function printSelectedOrAll() {
+    const selected = getSelectedStudentIds();
+    if (selected.length > 0) {
+      printSelectedCards();
+    } else {
+      if (confirm('Cetak semua kartu pelajar siswa (<%= students.length %> siswa) sesuai filter saat ini?')) {
+        printAllCards();
+      }
+    }
+  }
+
+  // Kirim WhatsApp Pengenalan hanya ke siswa yang dicentang
+  async function sendSelectedIntro() {
+    const selected = getSelectedStudentIds();
+    if (selected.length === 0) {
+      alert('Silakan centang siswa yang ingin dikirimi pesan pengenalan WA.');
+      return;
+    }
+
+    if (!confirm(`Kirim pesan pengenalan & ajakan verifikasi WA ke ${selected.length} siswa terpilih?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/dashboard/students/batch-send-intro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_ids: selected })
+      });
+      const data = await res.json();
+      alert(data.message);
+      location.reload();
+    } catch (e) {
+      alert('Gagal mengirim pesan: ' + e.message);
+    }
+  }
+</script>
+
+<%- include('../partials/footer', { isDashboard: true }) %>
