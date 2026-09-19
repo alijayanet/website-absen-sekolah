@@ -25,15 +25,25 @@
     <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl">
       <!-- Flash Messages -->
       <% if (successMsg) { %>
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
-          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
-          <span><%= successMsg %></span>
+        <div class="flash-alert bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+            <span><%= successMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-emerald-600 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
       <% } %>
       <% if (errorMsg) { %>
-        <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
-          <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
-          <span><%= errorMsg %></span>
+        <div class="flash-alert bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+            <span><%= errorMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-rose-600 hover:text-rose-900 p-1 rounded-lg hover:bg-rose-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
       <% } %>
 
@@ -92,6 +102,7 @@
               <tr>
                 <th class="px-6 py-3">Nama Pendidik</th>
                 <th class="px-6 py-3">Username</th>
+                <th class="px-6 py-3">No. WhatsApp</th>
                 <th class="px-6 py-3">Peran (Role)</th>
                 <th class="px-6 py-3">Kelas Binaan (Wali Kelas)</th>
                 <th class="px-6 py-3">Terdaftar Sejak</th>
@@ -101,7 +112,7 @@
             <tbody class="divide-y divide-slate-100">
               <% if (users.length === 0) { %>
                 <tr>
-                  <td colspan="6" class="px-6 py-8 text-center text-slate-400">
+                  <td colspan="7" class="px-6 py-8 text-center text-slate-400">
                     Belum ada data guru yang terdaftar.
                   </td>
                 </tr>
@@ -122,6 +133,16 @@
                   </td>
                   <td class="px-6 py-4 font-mono font-bold text-slate-700">
                     @<%= u.username %>
+                  </td>
+                  <td class="px-6 py-4">
+                    <% if (u.phone) { %>
+                      <a href="https://wa.me/<%= u.phone.replace(/[^0-9]/g, '') %>" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-emerald-700 hover:text-emerald-800 transition" title="Kirim WhatsApp">
+                        <i data-lucide="phone" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <span><%= u.phone %></span>
+                      </a>
+                    <% } else { %>
+                      <span class="text-slate-400 text-xs italic">-</span>
+                    <% } %>
                   </td>
                   <td class="px-6 py-4">
                     <% if (u.role === 'admin') { %>
@@ -211,6 +232,12 @@
       </div>
 
       <div>
+        <label class="block font-semibold text-slate-700 mb-1">No. WhatsApp / HP Guru</label>
+        <input type="text" name="phone" placeholder="Contoh: 081234567890" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 font-mono">
+        <p class="text-[10px] text-slate-400 mt-0.5">Digunakan untuk menerima rekap urutan absensi siswa di kelas binaan.</p>
+      </div>
+
+      <div>
         <label class="block font-semibold text-slate-700 mb-1">Peran Akun *</label>
         <select name="role" id="add_teacher_role" onchange="toggleRoleClass('add')" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
           <option value="guru" selected>Guru / Wali Kelas</option>
@@ -274,6 +301,12 @@
         </div>
       </div>
 
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1">No. WhatsApp / HP Guru</label>
+        <input type="text" name="phone" id="edit_phone" placeholder="Contoh: 081234567890" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 font-mono">
+        <p class="text-[10px] text-slate-400 mt-0.5">Digunakan untuk menerima rekap urutan absensi siswa di kelas binaan.</p>
+      </div>
+
       <div id="edit_class_container">
         <label class="block font-semibold text-slate-700 mb-1">Kelas Binaan (Sebagai Wali Kelas)</label>
         <select name="class_id" id="edit_class_id" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500">
@@ -321,6 +354,7 @@
     document.getElementById('editTeacherForm').action = `/dashboard/teachers/${user.id}/edit`;
     document.getElementById('edit_name').value = user.name;
     document.getElementById('edit_username').value = user.username;
+    document.getElementById('edit_phone').value = user.phone || '';
     document.getElementById('edit_role').value = user.role;
     document.getElementById('edit_class_id').value = user.class_id || '';
     toggleRoleClass('edit');

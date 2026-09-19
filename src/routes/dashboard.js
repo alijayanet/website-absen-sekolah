@@ -120,7 +120,9 @@ router.get('/dashboard', isAuthenticated, (req, res) => {
     waStatus,
     queueStats,
     waVerificationStats,
-    today
+    today,
+    successMsg: req.query.success || null,
+    errorMsg: req.query.error || null
   });
 });
 

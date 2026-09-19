@@ -8,6 +8,7 @@ const { attachGlobalData } = require('./middlewares/auth');
 // Services
 const whatsapp = require('./services/whatsapp');
 const queue = require('./services/queue');
+const scheduler = require('./services/scheduler');
 
 // Routes
 const landingRoute = require('./routes/landing');
@@ -84,4 +85,7 @@ app.listen(PORT, async () => {
 
   // Jalankan queue worker
   queue.trigger();
+
+  // Jalankan background scheduler untuk rekap harian otomatis
+  scheduler.start();
 });

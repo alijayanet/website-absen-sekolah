@@ -4,6 +4,7 @@ const XLSX = require('xlsx');
 const db = require('../database/db');
 const { isAuthenticated } = require('../middlewares/auth');
 const queue = require('../services/queue');
+const { generateTeacherSummary } = require('../services/summary');
 
 // 1. Tampilkan Daftar Kehadiran & Rekap
 router.get('/dashboard/attendances', isAuthenticated, (req, res) => {
@@ -294,6 +295,69 @@ router.get('/dashboard/attendances/export/excel', isAuthenticated, (req, res) =>
   } catch (err) {
     console.error('Error export attendance excel:', err);
     res.redirect('/dashboard/attendances?error=Gagal mengekspor laporan absensi.');
+  }
+});
+
+// 6. Preview Rekap Urutan Presensi Siswa untuk WhatsApp Guru
+router.get('/dashboard/attendances/teacher-summary-preview', isAuthenticated, (req, res) => {
+  try {
+    const user = req.session.user;
+    const today = new Date().toLocaleDateString('en-CA');
+    const date = req.query.date || today;
+    let classId = req.query.class_id;
+
+    // Jika guru, batasi hanya untuk kelas binaannya
+    if (user.role === 'guru') {
+      if (!user.class_id) {
+        return res.status(400).json({ success: false, message: 'Akun Anda belum memiliki kelas binaan.' });
+      }
+      classId = user.class_id;
+    }
+
+    if (!classId) {
+      // Ambil kelas pertama jika admin tidak memilih kelas
+      const firstClass = db.prepare('SELECT id FROM classes ORDER BY name ASC LIMIT 1').get();
+      if (!firstClass) {
+        return res.status(400).json({ success: false, message: 'Belum ada data kelas.' });
+      }
+      classId = firstClass.id;
+    }
+
+    const summary = generateTeacherSummary(classId, date);
+    res.json(summary);
+  } catch (err) {
+    console.error('Error preview teacher summary:', err);
+    res.status(500).json({ success: false, message: 'Gagal memuat pratinjau rekap: ' + err.message });
+  }
+});
+
+// 7. Kirim Rekap Urutan Presensi ke WhatsApp Guru
+router.post('/dashboard/attendances/send-teacher-summary', isAuthenticated, (req, res) => {
+  try {
+    const { phone, message, class_name } = req.body;
+
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({ success: false, message: 'Nomor WhatsApp tujuan wajib diisi.' });
+    }
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'Pesan rekap tidak boleh kosong.' });
+    }
+
+    const queueId = queue.enqueue({
+      phone: phone.trim(),
+      message: message.trim(),
+      type: 'TEACHER_SUMMARY'
+    });
+
+    res.json({
+      success: true,
+      queueId,
+      message: `Rekap urutan absensi ${class_name ? 'kelas ' + class_name : ''} berhasil dimasukkan ke antrean WhatsApp untuk nomor ${phone.trim()}!`
+    });
+  } catch (err) {
+    console.error('Error send teacher summary:', err);
+    res.status(500).json({ success: false, message: 'Gagal mengirim rekap: ' + err.message });
   }
 });
 

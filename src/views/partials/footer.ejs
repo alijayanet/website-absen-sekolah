@@ -21,6 +21,40 @@
     if (window.lucide) {
       lucide.createIcons();
     }
+
+    // Fungsi tutup notifikasi alert secara interaktif & animasi halus
+    function dismissAlert(alertEl) {
+      if (!alertEl) return;
+      alertEl.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+      alertEl.style.opacity = '0';
+      alertEl.style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        alertEl.style.maxHeight = '0';
+        alertEl.style.paddingTop = '0';
+        alertEl.style.paddingBottom = '0';
+        alertEl.style.marginTop = '0';
+        alertEl.style.marginBottom = '0';
+        alertEl.style.borderWidth = '0';
+        alertEl.style.overflow = 'hidden';
+        setTimeout(() => alertEl.remove(), 400);
+      }, 500);
+    }
+
+    // Otomatis hilangkan notif flash alert setelah 3.5 detik
+    document.addEventListener('DOMContentLoaded', () => {
+      const alerts = document.querySelectorAll('.flash-alert, [data-alert="flash"]');
+      if (alerts.length > 0) {
+        setTimeout(() => {
+          alerts.forEach(alert => dismissAlert(alert));
+        }, 3500);
+
+        // Bersihkan parameter query (?success=... atau ?error=...) dari URL address bar
+        if (window.location.search && (window.location.search.includes('success=') || window.location.search.includes('error='))) {
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      }
+    });
   </script>
 </body>
 </html>

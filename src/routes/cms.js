@@ -177,11 +177,12 @@ router.post('/dashboard/cms/gallery/:id/delete', isAuthenticated, isAdmin, (req,
 // 6. Simpan Pengumuman Landing Page
 router.post('/dashboard/cms/announcement', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const { announcement_title, announcement_content } = req.body;
+    const { announcement_title, announcement_content, hari_aktif } = req.body;
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
     upsert.run('announcement_title', announcement_title ? announcement_title.trim() : '');
     upsert.run('announcement_content', announcement_content ? announcement_content.trim() : '');
+    if (hari_aktif !== undefined) upsert.run('hari_aktif', hari_aktif.trim());
 
     res.redirect('/dashboard/cms?success=Pengumuman landing page berhasil diperbarui.');
   } catch (err) {
@@ -192,12 +193,15 @@ router.post('/dashboard/cms/announcement', isAuthenticated, isAdmin, (req, res) 
 // 7. Simpan Pengaturan Jam Sekolah & Absensi
 router.post('/dashboard/cms/schedule', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const { jam_masuk, toleransi_telat, jam_cutoff_alpa } = req.body;
+    const { hari_aktif, jam_masuk, toleransi_telat, jam_cutoff_alpa, wa_auto_teacher_summary, jam_rekap_guru } = req.body;
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
+    if (hari_aktif !== undefined) upsert.run('hari_aktif', hari_aktif.trim());
     if (jam_masuk) upsert.run('jam_masuk', jam_masuk.trim());
     if (toleransi_telat) upsert.run('toleransi_telat', toleransi_telat.trim());
     if (jam_cutoff_alpa) upsert.run('jam_cutoff_alpa', jam_cutoff_alpa.trim());
+    upsert.run('wa_auto_teacher_summary', wa_auto_teacher_summary === '1' ? '1' : '0');
+    if (jam_rekap_guru) upsert.run('jam_rekap_guru', jam_rekap_guru.trim());
 
     res.redirect('/dashboard/cms?success=Jadwal operasional absensi berhasil diperbarui.');
   } catch (err) {

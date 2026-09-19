@@ -23,15 +23,25 @@
 
     <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-5xl">
       <% if (successMsg) { %>
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
-          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
-          <span><%= successMsg %></span>
+        <div class="flash-alert bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+            <span><%= successMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-emerald-600 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
       <% } %>
       <% if (errorMsg) { %>
-        <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
-          <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
-          <span><%= errorMsg %></span>
+        <div class="flash-alert bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+            <span><%= errorMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-rose-600 hover:text-rose-900 p-1 rounded-lg hover:bg-rose-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
       <% } %>
 
@@ -308,6 +318,10 @@
             <label class="block font-semibold text-slate-700 mb-1">Isi Pesan Pengumuman</label>
             <textarea name="announcement_content" rows="3" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.announcement_content || '' %></textarea>
           </div>
+          <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-center gap-2 text-blue-800">
+            <i data-lucide="info" class="w-4 h-4 text-blue-600 flex-shrink-0"></i>
+            <span>Informasi <strong>Pintu Gerbang Ditutup</strong> (<%= settings.toleransi_telat || '07:15' %> WIB) dan <strong>Hari Aktif</strong> (<%= settings.hari_aktif || 'Senin – Jumat' %>) dapat disetel pada bagian <strong>Jadwal Operasional & Hari Aktif</strong> di bawah.</span>
+          </div>
           <div>
             <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
               Simpan Pengumuman
@@ -316,34 +330,68 @@
         </form>
       </div>
 
-      <!-- 6. Jadwal Operasional & Jam Masuk Absensi -->
+      <!-- 6. Jadwal Operasional, Hari Aktif & Jam Masuk Absensi -->
       <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
           <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i>
-          Jadwal Jam Masuk & Batas Keterlambatan
+          Jadwal Operasional, Hari Aktif & Jam Masuk
         </h3>
         <p class="text-xs text-slate-500 mb-4">
-          Tentukan jam masuk sekolah dan batas toleransi sebelum siswa dicatat berstatus terlambat.
+          Tentukan hari operasional sekolah, jam masuk, serta batas toleransi gerbang sebelum siswa dicatat berstatus terlambat.
         </p>
 
         <form action="/dashboard/cms/schedule" method="POST" class="space-y-4 text-xs">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Hari Aktif Sekolah</label>
+              <input type="text" name="hari_aktif" value="<%= settings.hari_aktif || 'Senin – Jumat' %>" placeholder="Contoh: Senin – Jumat" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <span class="text-[10px] text-slate-400 mt-1 block">Tampil di papan pengumuman landing page</span>
+            </div>
             <div>
               <label class="block font-semibold text-slate-700 mb-1">Jam Masuk (WIB)</label>
               <input type="time" name="jam_masuk" value="<%= settings.jam_masuk || '07:00' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <span class="text-[10px] text-slate-400 mt-1 block">Jam mulai kegiatan presensi</span>
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Batas Toleransi Telat (WIB)</label>
+              <label class="block font-semibold text-slate-700 mb-1">Batas Toleransi / Tutup Gerbang (WIB)</label>
               <input type="time" name="toleransi_telat" value="<%= settings.toleransi_telat || '07:15' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <span class="text-[10px] text-slate-400 mt-1 block">Tampil sebagai "Pintu Gerbang Ditutup"</span>
             </div>
             <div>
               <label class="block font-semibold text-slate-700 mb-1">Jam Cutoff Alpa / Broadcast (WIB)</label>
               <input type="time" name="jam_cutoff_alpa" value="<%= settings.jam_cutoff_alpa || '07:30' %>" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <span class="text-[10px] text-slate-400 mt-1 block">Batas broadcast WA siswa alpa</span>
             </div>
           </div>
+
+          <!-- Pengaturan Otomatis Kirim Rekap Guru -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                  <i data-lucide="send" class="w-4 h-4 text-blue-600"></i>
+                  Kirim Rekap Urutan Presensi Otomatis ke WhatsApp Guru / Wali Kelas
+                </span>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                  Setiap hari pada jam yang ditentukan, sistem akan otomatis mengirim rekapan urutan presensi siswa (tap pertama hingga akhir) ke nomor WhatsApp Wali Kelas masing-masing.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" name="wa_auto_teacher_summary" value="1" <%= settings.wa_auto_teacher_summary === '1' ? 'checked' : '' %> class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div class="max-w-xs pt-1">
+              <label class="block font-semibold text-slate-700 mb-1">Jam Pengiriman Rekap Guru Otomatis (WIB)</label>
+              <input type="time" name="jam_rekap_guru" value="<%= settings.jam_rekap_guru || '09:00' %>" class="w-full p-2 bg-white border border-slate-200 rounded-lg font-mono text-xs">
+              <span class="text-[10px] text-slate-400 mt-1 block">Contoh: 09:00 (Pukul 9 pagi). Rekap juga tetap dapat dikirimkan secara manual kapan saja dari menu Presensi.</span>
+            </div>
+          </div>
+
           <div>
             <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
-              Simpan Jadwal Jam Masuk
+              Simpan Jadwal & Pengaturan
             </button>
           </div>
         </form>

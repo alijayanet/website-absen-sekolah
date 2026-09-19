@@ -26,4 +26,11 @@ const schemaPath = path.join(__dirname, 'schema.sql');
 const schema = fs.readFileSync(schemaPath, 'utf8');
 db.exec(schema);
 
+// Migrasi skema: Tambah kolom phone pada users jika belum ada
+try {
+  db.prepare('ALTER TABLE users ADD COLUMN phone TEXT').run();
+} catch (e) {
+  // Kolom sudah ada
+}
+
 module.exports = db;

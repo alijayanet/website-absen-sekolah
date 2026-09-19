@@ -8,7 +8,7 @@ const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 router.get('/dashboard/teachers', isAuthenticated, isAdmin, (req, res) => {
   try {
     const users = db.prepare(`
-      SELECT u.id, u.username, u.name, u.role, u.class_id, u.created_at, 
+      SELECT u.id, u.username, u.name, u.phone, u.role, u.class_id, u.created_at, 
              c.name as class_name, c.level as class_level
       FROM users u
       LEFT JOIN classes c ON u.class_id = c.id
@@ -32,7 +32,7 @@ router.get('/dashboard/teachers', isAuthenticated, isAdmin, (req, res) => {
 // 2. Tambah Akun Guru / Wali Kelas Baru
 router.post('/dashboard/teachers', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const { name, username, password, class_id, role } = req.body;
+    const { name, username, password, phone, class_id, role } = req.body;
 
     if (!name || !username || !password) {
       return res.redirect('/dashboard/teachers?error=Nama lengkap, username, dan password wajib diisi.');
@@ -46,15 +46,16 @@ router.post('/dashboard/teachers', isAuthenticated, isAdmin, (req, res) => {
 
     const userRole = role === 'admin' ? 'admin' : 'guru';
     const assignedClassId = (userRole === 'guru' && class_id) ? Number(class_id) : null;
+    const cleanPhone = phone ? phone.trim() : null;
 
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(password.trim(), salt);
 
     const stmt = db.prepare(`
-      INSERT INTO users (username, password_hash, name, role, class_id)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO users (username, password_hash, name, phone, role, class_id)
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(cleanUsername, passwordHash, name.trim(), userRole, assignedClassId);
+    stmt.run(cleanUsername, passwordHash, name.trim(), cleanPhone, userRole, assignedClassId);
 
     res.redirect('/dashboard/teachers?success=Akun guru / wali kelas berhasil ditambahkan.');
   } catch (err) {
@@ -67,7 +68,7 @@ router.post('/dashboard/teachers', isAuthenticated, isAdmin, (req, res) => {
 router.post('/dashboard/teachers/:id/edit', isAuthenticated, isAdmin, (req, res) => {
   try {
     const id = req.params.id;
-    const { name, username, password, class_id, role } = req.body;
+    const { name, username, password, phone, class_id, role } = req.body;
 
     const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
     if (!targetUser) {
@@ -82,6 +83,7 @@ router.post('/dashboard/teachers/:id/edit', isAuthenticated, isAdmin, (req, res)
 
     const userRole = role ? (role === 'admin' ? 'admin' : 'guru') : targetUser.role;
     const assignedClassId = (userRole === 'guru' && class_id) ? Number(class_id) : null;
+    const cleanPhone = phone !== undefined ? (phone ? phone.trim() : null) : targetUser.phone;
 
     if (password && password.trim().length > 0) {
       const salt = bcrypt.genSaltSync(10);
@@ -89,23 +91,24 @@ router.post('/dashboard/teachers/:id/edit', isAuthenticated, isAdmin, (req, res)
 
       const stmt = db.prepare(`
         UPDATE users 
-        SET name = ?, username = ?, role = ?, class_id = ?, password_hash = ?
+        SET name = ?, username = ?, phone = ?, role = ?, class_id = ?, password_hash = ?
         WHERE id = ?
       `);
-      stmt.run(name.trim(), cleanUsername, userRole, assignedClassId, passwordHash, id);
+      stmt.run(name.trim(), cleanUsername, cleanPhone, userRole, assignedClassId, passwordHash, id);
     } else {
       const stmt = db.prepare(`
         UPDATE users 
-        SET name = ?, username = ?, role = ?, class_id = ?
+        SET name = ?, username = ?, phone = ?, role = ?, class_id = ?
         WHERE id = ?
       `);
-      stmt.run(name.trim(), cleanUsername, userRole, assignedClassId, id);
+      stmt.run(name.trim(), cleanUsername, cleanPhone, userRole, assignedClassId, id);
     }
 
     // Jika admin mengedit akunnya sendiri, perbarui session
     if (req.session.user && req.session.user.id == id) {
       req.session.user.name = name.trim();
       req.session.user.username = cleanUsername;
+      req.session.user.phone = cleanPhone;
       req.session.user.role = userRole;
       req.session.user.class_id = assignedClassId;
       req.session.user.class_name = null; // akan diisi otomatis oleh middleware

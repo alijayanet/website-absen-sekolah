@@ -24,6 +24,16 @@
       <!-- Sisi Kanan: Action Buttons (Icon Saja di HP, Icon + Teks di Desktop) -->
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <button 
+          type="button"
+          onclick="openTeacherSummaryModal()" 
+          class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition" 
+          title="Kirim Urutan Absensi ke WhatsApp Guru"
+        >
+          <i data-lucide="share-2" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+          <span class="hidden sm:inline sm:ml-1.5">Kirim ke WA Guru</span>
+        </button>
+
+        <button 
           onclick="openModal('manualModal')" 
           class="inline-flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition" 
           title="Input Izin / Sakit"
@@ -54,15 +64,25 @@
 
     <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl">
       <% if (successMsg) { %>
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
-          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
-          <span><%= successMsg %></span>
+        <div class="flash-alert bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+            <span><%= successMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-emerald-600 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
       <% } %>
       <% if (errorMsg) { %>
-        <div class="bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center gap-2">
-          <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
-          <span><%= errorMsg %></span>
+        <div class="flash-alert bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium p-3.5 rounded-xl flex items-center justify-between gap-2 shadow-sm transition-all duration-500">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+            <span><%= errorMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-rose-600 hover:text-rose-900 p-1 rounded-lg hover:bg-rose-100 transition shrink-0" title="Tutup Notifikasi">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
       <% } %>
 
@@ -322,11 +342,115 @@
   </div>
 </div>
 
+<!-- Modal Kirim Urutan Absensi ke WhatsApp Guru -->
+<div id="teacherSummaryModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-50">
+  <div class="bg-white rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl max-h-[92vh] flex flex-col">
+    <!-- Header Modal -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center font-bold">
+          <i data-lucide="share-2" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Kirim Rekap Urutan Absen ke WA Guru</h3>
+          <p class="text-[11px] text-slate-500">Kirim daftar kehadiran murid kronologis (dari awal ke akhir) dalam 1 pesan</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeModal('teacherSummaryModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Form & Controls -->
+    <div class="mt-4 space-y-3.5 text-xs overflow-y-auto pr-1 flex-1">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Pilihan Kelas -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Kelas Target *</label>
+          <% if (currentUser && currentUser.role === 'guru' && currentUser.class_id) { %>
+            <input type="hidden" id="summary_class_id" value="<%= currentUser.class_id %>">
+            <input type="text" readonly value="Kelas <%= currentUser.class_name %>" class="w-full p-2 bg-slate-100 border border-slate-200 rounded-lg font-bold text-slate-700 cursor-not-allowed">
+          <% } else { %>
+            <select id="summary_class_id" onchange="fetchTeacherSummaryPreview()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium focus:outline-none focus:border-emerald-500">
+              <% classes.forEach(c => { %>
+                <option value="<%= c.id %>" <%= (filters.classId == c.id) ? 'selected' : '' %>>Kelas <%= c.name %></option>
+              <% }) %>
+            </select>
+          <% } %>
+        </div>
+
+        <!-- Tanggal Absen -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Tanggal Absensi *</label>
+          <input type="date" id="summary_date" value="<%= filters.date %>" onchange="fetchTeacherSummaryPreview()" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono focus:outline-none focus:border-emerald-500">
+        </div>
+      </div>
+
+      <!-- Informasi Wali Kelas & Nomor WhatsApp Tujuan -->
+      <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100">
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <span class="font-bold text-emerald-900 text-xs flex items-center gap-1.5">
+            <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+            Wali Kelas: <span id="summary_teacher_name" class="font-bold text-slate-800">Memuat...</span>
+          </span>
+          <span id="summary_stats_badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 shadow-2xs">
+            0 Siswa Hadir
+          </span>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 text-[11px] mb-1">Nomor WhatsApp Tujuan Guru / Wali Kelas *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
+              <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+            </span>
+            <input type="text" id="summary_target_phone" placeholder="Contoh: 081947215703 atau 62819..." class="w-full pl-8 p-2 bg-white border border-emerald-200 rounded-lg font-mono text-xs focus:outline-none focus:border-emerald-500">
+          </div>
+          <p class="text-[10px] text-slate-500 mt-1">Otomatis terisi nomor wali kelas. Anda juga dapat menggantinya dengan nomor lain.</p>
+        </div>
+      </div>
+
+      <!-- Preview Teks Pesan WhatsApp -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block font-semibold text-slate-700">Pratinjau Isi Pesan WhatsApp (Dapat Diedit)</label>
+          <button type="button" onclick="copySummaryText()" class="text-emerald-700 hover:text-emerald-800 font-semibold text-[11px] inline-flex items-center gap-1">
+            <i data-lucide="copy" class="w-3 h-3"></i>
+            <span id="copy_badge">Salin Pesan</span>
+          </button>
+        </div>
+        <textarea id="summary_message" rows="9" class="w-full p-2.5 bg-slate-900 text-emerald-400 font-mono text-[11px] leading-relaxed rounded-xl border border-slate-800 focus:outline-none focus:border-emerald-500 shadow-inner select-all"></textarea>
+      </div>
+    </div>
+
+    <!-- Tombol Aksi Bawah Modal -->
+    <div class="pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 shrink-0">
+      <button type="button" onclick="closeModal('teacherSummaryModal')" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold transition text-xs">
+        Tutup
+      </button>
+
+      <div class="flex items-center gap-2">
+        <!-- Buka Langsung di WhatsApp Web/App -->
+        <button type="button" onclick="openDirectWhatsApp()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 hover:border-emerald-300 font-semibold transition text-xs" title="Buka dan kirim lewat WhatsApp Web atau Aplikasi">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span>Buka di WA</span>
+        </button>
+
+        <!-- Kirim Otomatis via Bot WhatsApp Server -->
+        <button type="button" id="btn_send_summary" onclick="sendTeacherSummaryViaBot()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition text-xs">
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          <span>Kirim via Bot Server</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   function openModal(id) {
     const m = document.getElementById(id);
     m.classList.remove('hidden');
     m.classList.add('flex');
+    if (window.lucide) lucide.createIcons();
   }
 
   function closeModal(id) {
@@ -338,6 +462,146 @@
   function openManualForStudent(studentId, studentName) {
     document.getElementById('manual_student_id').value = studentId;
     openModal('manualModal');
+  }
+
+  let currentSummaryData = null;
+
+  async function openTeacherSummaryModal() {
+    openModal('teacherSummaryModal');
+    await fetchTeacherSummaryPreview();
+  }
+
+  async function fetchTeacherSummaryPreview() {
+    const classIdEl = document.getElementById('summary_class_id');
+    const dateEl = document.getElementById('summary_date');
+    const classId = classIdEl ? classIdEl.value : '';
+    const date = dateEl ? dateEl.value : '';
+
+    const teacherNameEl = document.getElementById('summary_teacher_name');
+    const targetPhoneEl = document.getElementById('summary_target_phone');
+    const messageEl = document.getElementById('summary_message');
+    const badgeEl = document.getElementById('summary_stats_badge');
+
+    teacherNameEl.innerText = 'Memuat...';
+    messageEl.value = 'Sedang memuat data urutan presensi...';
+
+    try {
+      const res = await fetch(`/dashboard/attendances/teacher-summary-preview?class_id=${encodeURIComponent(classId)}&date=${encodeURIComponent(date)}`);
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Gagal memuat pratinjau');
+        return;
+      }
+
+      currentSummaryData = data;
+      teacherNameEl.innerText = data.teacherName ? `${data.teacherName}` : '(Belum ada wali kelas)';
+      targetPhoneEl.value = data.teacherPhone || '';
+      messageEl.value = data.message || '';
+      badgeEl.innerText = `${data.attendancesCount} dari ${data.totalStudents} Siswa Hadir`;
+    } catch (e) {
+      console.error(e);
+      messageEl.value = 'Gagal memuat data: ' + e.message;
+    }
+  }
+
+  function copySummaryText() {
+    const messageEl = document.getElementById('summary_message');
+    const copyBadge = document.getElementById('copy_badge');
+    if (!messageEl || !messageEl.value) return;
+
+    navigator.clipboard.writeText(messageEl.value).then(() => {
+      copyBadge.innerText = 'Tersalin! ✓';
+      setTimeout(() => {
+        copyBadge.innerText = 'Salin Pesan';
+      }, 2000);
+    }).catch(err => {
+      messageEl.select();
+      document.execCommand('copy');
+      copyBadge.innerText = 'Tersalin! ✓';
+      setTimeout(() => {
+        copyBadge.innerText = 'Salin Pesan';
+      }, 2000);
+    });
+  }
+
+  function openDirectWhatsApp() {
+    const phoneEl = document.getElementById('summary_target_phone');
+    const messageEl = document.getElementById('summary_message');
+    let phone = phoneEl ? phoneEl.value.trim().replace(/[^0-9]/g, '') : '';
+    const message = messageEl ? messageEl.value : '';
+
+    if (!phone) {
+      alert('Masukkan nomor WhatsApp tujuan terlebih dahulu.');
+      phoneEl.focus();
+      return;
+    }
+
+    if (phone.startsWith('0')) {
+      phone = '62' + phone.slice(1);
+    }
+
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+  }
+
+  async function sendTeacherSummaryViaBot() {
+    const phoneEl = document.getElementById('summary_target_phone');
+    const messageEl = document.getElementById('summary_message');
+    const classIdEl = document.getElementById('summary_class_id');
+    const dateEl = document.getElementById('summary_date');
+    const btnSend = document.getElementById('btn_send_summary');
+
+    const phone = phoneEl ? phoneEl.value.trim() : '';
+    const message = messageEl ? messageEl.value.trim() : '';
+    const classId = classIdEl ? classIdEl.value : '';
+    const date = dateEl ? dateEl.value : '';
+
+    if (!phone) {
+      alert('Nomor WhatsApp tujuan wajib diisi.');
+      phoneEl.focus();
+      return;
+    }
+
+    if (!message) {
+      alert('Pesan rekap absensi tidak boleh kosong.');
+      return;
+    }
+
+    btnSend.disabled = true;
+    btnSend.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Mengirim...</span>`;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const res = await fetch('/dashboard/attendances/send-teacher-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone,
+          message,
+          class_id: classId,
+          date,
+          class_name: currentSummaryData ? currentSummaryData.className : ''
+        })
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Gagal mengirim rekap ke bot');
+        btnSend.disabled = false;
+        btnSend.innerHTML = `<i data-lucide="send" class="w-3.5 h-3.5"></i><span>Kirim via Bot Server</span>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      alert(data.message);
+      closeModal('teacherSummaryModal');
+    } catch (e) {
+      alert('Gagal mengirim: ' + e.message);
+    } finally {
+      btnSend.disabled = false;
+      btnSend.innerHTML = `<i data-lucide="send" class="w-3.5 h-3.5"></i><span>Kirim via Bot Server</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
   }
 
   async function triggerBroadcastAlpa() {
@@ -361,6 +625,14 @@
       alert('Gagal mengirim broadcast: ' + e.message);
     }
   }
+
+  // Auto-buka modal jika parameter openSummary=true
+  document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openSummary') === 'true') {
+      openTeacherSummaryModal();
+    }
+  });
 </script>
 
 <%- include('../partials/footer', { isDashboard: true }) %>

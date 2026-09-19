@@ -27,6 +27,10 @@ function seedDatabase() {
     ['jam_masuk', '07:00'],
     ['toleransi_telat', '07:15'],
     ['jam_cutoff_alpa', '07:30'],
+    ['hari_aktif', 'Senin – Jumat'],
+    ['wa_auto_teacher_summary', '0'],
+    ['jam_rekap_guru', '09:00'],
+    ['last_auto_teacher_summary_date', ''],
     ['wa_enabled', '1'],
     ['wa_template_absen', 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nDiberitahukan bahwa ananda telah melakukan absensi di sekolah:\n📅 Tanggal: {tanggal}\n⏰ Pukul: {jam} WIB\n📌 Status: *{status}*{keterangan_telat}\n\nTerima kasih atas kerja samanya.\n_Sistem Absensi {nama_sekolah}_'],
     ['wa_template_intro', 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nIni adalah nomor layanan resmi bot absensi & informasi kehadiran dari *{nama_sekolah}*.\n\n⚠️ *MOHON LAKUKAN LANGKAH BERIKUT:*\n1. *SIMPAN NOMOR INI* di kontak HP Anda (beri nama: *Absensi {nama_sekolah}*).\n2. *BALAS PESAN INI* dengan mengetik kata *YA* agar nomor Anda terverifikasi di sistem kami dan laporan kehadiran harian ananda dapat otomatis terkirim.\n\nTerima kasih atas kerja samanya.\nWassalamu’alaikum Wr. Wb.'],
@@ -69,12 +73,12 @@ function seedDatabase() {
   const adminPassword = bcrypt.hashSync('admin123', salt);
   const guruPassword = bcrypt.hashSync('guru123', salt);
 
-  const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, password_hash, name, role, class_id) VALUES (?, ?, ?, ?, ?)');
-  insertUser.run('admin', adminPassword, 'Administrator Sekolah', 'admin', null);
+  const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, password_hash, name, phone, role, class_id) VALUES (?, ?, ?, ?, ?, ?)');
+  insertUser.run('admin', adminPassword, 'Administrator Sekolah', '081234567890', 'admin', null);
   
   const classRow = db.prepare('SELECT id FROM classes WHERE name = ?').get('X IPA 1');
   const classId = classRow ? classRow.id : null;
-  insertUser.run('guru_ipa1', guruPassword, 'Budi Santoso, S.Pd', 'guru', classId);
+  insertUser.run('guru_ipa1', guruPassword, 'Budi Santoso, S.Pd', '081947215703', 'guru', classId);
 
   // 4. Sample Students
   if (classId) {

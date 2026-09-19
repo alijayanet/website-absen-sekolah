@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
+  phone TEXT,
   role TEXT NOT NULL CHECK(role IN ('admin', 'guru')),
   class_id INTEGER REFERENCES classes(id) ON DELETE SET NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
