@@ -1292,9 +1292,24 @@ class BotService {
     }
 
     // ==========================================
-    // 9. PERINTAH: MENU / BANTUAN / SAPAAN RAMAH
+    // 9. PERINTAH: MENU / BANTUAN (HANYA PERINTAH VALID)
     // ==========================================
-    const isGreeting = /^(halo|hai|hi|hei|pagi|siang|sore|malam|assalamu|permisi|tes|test|menu|bantuan|help)/i.test(firstWord);
+    const isMenuCommand = /^([!/]?MENU|[!/]?BANTUAN|[!/]?HELP|[!/]?PANDUAN)$/i.test(firstWord);
+
+    // Hanya perintah resmi yang dibalas oleh bot.
+    // Jika bukan perintah MENU/BANTUAN dan bukan perintah lainnya di atas, abaikan pesan masuk (jangan dibalas).
+    if (!isMenuCommand) {
+      console.log(`[WhatsApp Bot] Pesan diabaikan (bukan perintah bot resmi): "${rawText}" dari ${senderPhone || senderJid}`);
+      return null;
+    }
+
+    // Selain nomor yang terdaftar di database (Guru, Wali Murid, Admin),
+    // jangan dibalas dengan pesan selamat datang / menu bantuan.
+    const isRegistered = Boolean(teacher || admin || (parentStudents && parentStudents.length > 0));
+    if (!isRegistered) {
+      console.log(`[WhatsApp Bot] Perintah MENU diabaikan (nomor ${senderPhone || senderJid} tidak terdaftar di database).`);
+      return null;
+    }
 
     let greetingTitle = 'Halo!';
     if (teacher) {
@@ -1302,6 +1317,8 @@ class BotService {
     } else if (parentStudents.length > 0) {
       const pName = parentStudents[0].parent_name ? `Bapak/Ibu ${parentStudents[0].parent_name}` : 'Bapak/Ibu Wali Murid';
       greetingTitle = `Halo ${pName}!`;
+    } else if (admin) {
+      greetingTitle = `Halo Administrator *${admin.name}*!`;
     }
 
     let menuMsg = `👋 *${greetingTitle}*\n`;
@@ -1328,6 +1345,13 @@ class BotService {
       menuMsg += `• *TARIK <NAMA/NIS> <JUMLAH>* : Catat penarikan tabungan (Contoh: *TARIK Ahmad 10rb*)\n`;
       menuMsg += `• *REKAP* : Rekap urutan presensi kelas Anda hari ini\n`;
       menuMsg += `• *BELUM* : Daftar siswa yang belum tap presensi hari ini\n`;
+    }
+
+    if (admin) {
+      menuMsg += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
+      menuMsg += `📌 *MENU KHUSUS ADMINISTRATOR:*\n`;
+      menuMsg += `• *TABUNGAN* / *TOTAL TABUNGAN* : Cek rekapitulasi & grand total tabungan sekolah\n`;
+      menuMsg += `• *INFO* : Kontak & profil resmi sekolah\n`;
     }
 
     menuMsg += `━━━━━━━━━━━━━━━━━━━━━\n`;
