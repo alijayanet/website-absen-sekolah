@@ -10,5 +10,7 @@ module.exports = {
   photosPath: path.resolve(process.env.UPLOAD_FOLDER || './data/uploads', 'photos'),
   logosPath: path.resolve(process.env.UPLOAD_FOLDER || './data/uploads', 'logos'),
   galleryPath: path.resolve(process.env.UPLOAD_FOLDER || './data/uploads', 'gallery'),
-  bannersPath: path.resolve(process.env.UPLOAD_FOLDER || './data/uploads', 'banners')
+  bannersPath: path.resolve(process.env.UPLOAD_FOLDER || './data/uploads', 'banners'),
+  lettersPath: path.resolve(process.env.UPLOAD_FOLDER || './data/uploads', 'letters'),
+  qrisPath: path.resolve(process.env.UPLOAD_FOLDER || './data/uploads', 'qris')
 };

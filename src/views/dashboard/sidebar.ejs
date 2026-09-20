@@ -50,7 +50,43 @@
         <span>Rekap Presensi & Alpa</span>
       </a>
 
+      <a href="/dashboard/leaves" class="flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath.startsWith('/dashboard/leaves') ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <div class="flex items-center gap-3">
+          <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+          <span>Pengajuan Izin Siswa</span>
+        </div>
+        <% if (locals.pendingLeavesCount && locals.pendingLeavesCount > 0) { %>
+          <span class="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-slate-950 rounded-full font-mono">
+            <%= pendingLeavesCount %>
+          </span>
+        <% } %>
+      </a>
+
+      <div class="pt-3 pb-1 px-3">
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Keuangan & SPP</p>
+      </div>
+
+      <a href="/dashboard/finance" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath === '/dashboard/finance' ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <i data-lucide="wallet" class="w-4 h-4"></i>
+        <span>Ringkasan Keuangan</span>
+      </a>
+
+      <a href="/dashboard/finance/bills" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath.startsWith('/dashboard/finance/bills') ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <i data-lucide="receipt" class="w-4 h-4"></i>
+        <span>Tagihan Siswa & SPP</span>
+      </a>
+
+      <a href="/dashboard/savings" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath.startsWith('/dashboard/savings') ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+        <i data-lucide="coins" class="w-4 h-4"></i>
+        <span>Tabungan Siswa</span>
+      </a>
+
       <% if (currentUser.role === 'admin') { %>
+        <a href="/dashboard/finance/qris" class="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition <%= currentPath === '/dashboard/finance/qris' ? 'bg-blue-600 text-white shadow' : 'hover:bg-slate-800 text-slate-300' %>">
+          <i data-lucide="qr-code" class="w-4 h-4"></i>
+          <span>Pengaturan QRIS Statis</span>
+        </a>
+
         <div class="pt-3 pb-1 px-3">
           <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Sistem & Pendidik</p>
         </div>

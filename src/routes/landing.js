@@ -1,6 +1,33 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const db = require('../database/db');
+const config = require('../config');
+
+// Konfigurasi Upload Surat Dokter / Bukti Izin dari Orang Tua
+const letterStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, config.lettersPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const uniqueName = `surat_${Date.now()}_${Math.round(Math.random() * 1E9)}${ext}`;
+    cb(null, uniqueName);
+  }
+});
+const letterFilter = (req, file, cb) => {
+  if (/image\/(jpeg|jpg|png|webp)|application\/pdf/.test(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Format berkas harus berupa gambar (JPG, PNG, WEBP) atau PDF.'));
+  }
+};
+const uploadLetter = multer({
+  storage: letterStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Maks 5MB
+  fileFilter: letterFilter
+});
 
 // Halaman Depan / Landing Page
 router.get('/', (req, res) => {
@@ -8,7 +35,12 @@ router.get('/', (req, res) => {
   let studentData = null;
   let attendanceSummary = null;
   let recentAttendances = [];
+  let recentLeaves = [];
+  let waliKelas = null;
   let errorMsg = null;
+  const leaveSuccess = req.query.leave_success || null;
+  const leaveError = req.query.leave_error || null;
+
 
   if (keyword) {
     // Cari data siswa berdasarkan NIS atau NISN
@@ -20,6 +52,14 @@ router.get('/', (req, res) => {
     `).get(keyword, keyword);
 
     if (studentData) {
+      // Ambil Guru / Wali Kelas penanggung jawab rombel
+      waliKelas = db.prepare(`
+        SELECT u.name, u.phone 
+        FROM users u 
+        WHERE u.role = 'guru' AND u.class_id = ? 
+        LIMIT 1
+      `).get(studentData.class_id);
+
       // Ambil riwayat absensi bulan ini
       const now = new Date();
       const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -30,6 +70,16 @@ router.get('/', (req, res) => {
         ORDER BY date DESC 
         LIMIT 31
       `).all(studentData.id, `${currentMonthPrefix}%`);
+
+      // Ambil riwayat pengajuan izin siswa terakhir
+      recentLeaves = db.prepare(`
+        SELECT lr.*, u.name as reviewer_name 
+        FROM leave_requests lr 
+        LEFT JOIN users u ON lr.reviewed_by = u.id 
+        WHERE lr.student_id = ? 
+        ORDER BY lr.id DESC 
+        LIMIT 5
+      `).all(studentData.id);
 
       // Hitung ringkasan statistik
       const stats = db.prepare(`
@@ -82,7 +132,11 @@ router.get('/', (req, res) => {
     studentData,
     attendanceSummary,
     recentAttendances,
+    recentLeaves,
     errorMsg,
+    leaveSuccess,
+    leaveError,
+    waliKelas,
     gallery,
     teachers,
     overview: {
@@ -90,6 +144,62 @@ router.get('/', (req, res) => {
       totalClasses,
       totalTeachers,
       todayAttended
+    }
+  });
+});
+
+// Formulir Pengajuan Izin / Sakit Mandiri oleh Orang Tua Siswa
+router.post('/leaves/submit', (req, res) => {
+  uploadLetter.single('letter_attachment')(req, res, (err) => {
+    const keyword = (req.body.keyword || '').trim();
+    const redirectUrl = `/#cek-kehadiran?q=${encodeURIComponent(keyword)}`;
+
+    if (err) {
+      return res.redirect(`${redirectUrl}&leave_error=${encodeURIComponent(err.message)}`);
+    }
+
+    try {
+      const { student_id, type, start_date, end_date, reason, parent_phone_last4 } = req.body;
+
+      if (!student_id || !type || !start_date || !end_date || !reason || !parent_phone_last4) {
+        return res.redirect(`${redirectUrl}&leave_error=${encodeURIComponent('Mohon lengkapi semua isian formulir pengajuan izin.')}`);
+      }
+
+      if (start_date > end_date) {
+        return res.redirect(`${redirectUrl}&leave_error=${encodeURIComponent('Tanggal mulai tidak boleh lebih lambat dari tanggal selesai.')}`);
+      }
+
+      const student = db.prepare('SELECT * FROM students WHERE id = ? AND is_active = 1').get(student_id);
+      if (!student) {
+        return res.redirect(`${redirectUrl}&leave_error=${encodeURIComponent('Data siswa tidak ditemukan atau tidak aktif.')}`);
+      }
+
+      // Verifikasi Keamanan: Cocokkan 4 Digit Terakhir No. WhatsApp Orang Tua
+      if (student.parent_phone && student.parent_phone.trim() !== '') {
+        const cleanPhone = student.parent_phone.replace(/\D/g, '');
+        const cleanInputLast4 = parent_phone_last4.replace(/\D/g, '');
+        const actualLast4 = cleanPhone.slice(-4);
+
+        if (cleanInputLast4.length !== 4 || actualLast4 !== cleanInputLast4) {
+          return res.redirect(`${redirectUrl}&leave_error=${encodeURIComponent('Verifikasi gagal: 4 digit terakhir nomor WhatsApp orang tua tidak cocok dengan data siswa yang terdaftar.')}`);
+        }
+      }
+
+      const attachmentPath = req.file ? `/uploads/letters/${req.file.filename}` : null;
+
+      // Simpan Pengajuan Izin dengan Status PENDING
+      const stmt = db.prepare(`
+        INSERT INTO leave_requests (
+          student_id, type, start_date, end_date, reason, attachment, parent_phone_last4, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')
+      `);
+      stmt.run(student.id, type, start_date, end_date, reason.trim(), attachmentPath, parent_phone_last4.trim());
+
+      const successMsg = `Permohonan izin ${type === 'SAKIT' ? 'sakit' : 'izin'} untuk ananda ${student.name} berhasil diajukan dan sedang menunggu persetujuan Wali Kelas.`;
+      res.redirect(`${redirectUrl}&leave_success=${encodeURIComponent(successMsg)}`);
+    } catch (dbErr) {
+      console.error('Error submit leave request:', dbErr);
+      res.redirect(`${redirectUrl}&leave_error=${encodeURIComponent('Terjadi kesalahan saat memproses permohonan: ' + dbErr.message)}`);
     }
   });
 });

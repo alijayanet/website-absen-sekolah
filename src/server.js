@@ -22,6 +22,10 @@ const cmsRoute = require('./routes/cms');
 const whatsappRoute = require('./routes/whatsapp');
 const idcardRoute = require('./routes/idcard');
 const teachersRoute = require('./routes/teachers');
+const leavesRoute = require('./routes/leaves');
+const financeRoute = require('./routes/finance');
+const savingsRoute = require('./routes/savings');
+const paymentNotifRoute = require('./routes/api/paymentNotif');
 
 const app = express();
 
@@ -62,6 +66,10 @@ app.use('/', cmsRoute);
 app.use('/', whatsappRoute);
 app.use('/', idcardRoute);
 app.use('/', teachersRoute);
+app.use('/', leavesRoute);
+app.use('/', financeRoute);
+app.use('/', savingsRoute);
+app.use('/api/webhook', paymentNotifRoute);
 
 // Handler 404
 app.use((req, res) => {

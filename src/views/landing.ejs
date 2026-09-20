@@ -223,50 +223,107 @@
       </div>
     <% } %>
 
+    <!-- Flash Notifikasi Pengajuan Izin -->
+    <% if (locals.leaveSuccess) { %>
+      <div class="mt-6 max-w-2xl mx-auto bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center gap-3 text-emerald-800 text-xs font-medium text-left shadow-sm">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+        <span><%= leaveSuccess %></span>
+      </div>
+    <% } %>
+    <% if (locals.leaveError) { %>
+      <div class="mt-6 max-w-2xl mx-auto bg-rose-50 border border-rose-200 rounded-xl p-3.5 flex items-center gap-3 text-rose-800 text-xs font-medium text-left shadow-sm">
+        <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 flex-shrink-0"></i>
+        <span><%= leaveError %></span>
+      </div>
+    <% } %>
+
     <!-- Hasil Pencarian Siswa -->
     <% if (studentData) { %>
       <div class="mt-10 text-left">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <!-- Kartu Profil Siswa -->
           <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
-            <div class="flex items-start gap-4">
-              <% if (studentData.photo) { %>
-                <img src="<%= studentData.photo %>" alt="<%= studentData.name %>" class="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm">
-              <% } else { %>
-                <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center font-bold text-2xl">
-                  <%= studentData.name.charAt(0) %>
+            <div>
+              <div class="flex items-start gap-4">
+                <% if (studentData.photo) { %>
+                  <img src="<%= studentData.photo %>" alt="<%= studentData.name %>" class="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm">
+                <% } else { %>
+                  <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center font-bold text-2xl">
+                    <%= studentData.name.charAt(0) %>
+                  </div>
+                <% } %>
+                <div>
+                  <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 mb-1">
+                    Kelas <%= studentData.class_name %>
+                  </span>
+                  <h4 class="font-bold text-slate-900 text-base leading-tight"><%= studentData.name %></h4>
+                  <p class="text-xs text-slate-500 mt-0.5">NIS: <span class="font-mono font-bold text-slate-700"><%= studentData.nis %></span> &bull; NISN: <span class="font-mono"><%= studentData.nisn || '-' %></span></p>
                 </div>
-              <% } %>
-              <div>
-                <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 mb-1">
-                  Kelas <%= studentData.class_name %>
-                </span>
-                <h4 class="font-bold text-slate-900 text-base leading-tight"><%= studentData.name %></h4>
-                <p class="text-xs text-slate-500 mt-0.5">NIS: <span class="font-mono font-bold text-slate-700"><%= studentData.nis %></span> &bull; NISN: <span class="font-mono"><%= studentData.nisn || '-' %></span></p>
+              </div>
+
+              <!-- Highlight Card: Saldo Tabungan Siswa -->
+              <div class="mt-4 p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50/70 to-emerald-50/40 border border-emerald-200/80 shadow-xs">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                      <i data-lucide="coins" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 block">Saldo Tabungan</span>
+                      <span class="text-[11px] text-slate-500 font-medium block">Simpanan Siswa</span>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <span class="font-mono text-base sm:text-lg font-black text-emerald-700 block">
+                      Rp <%= Number(studentData.savings_balance || 0).toLocaleString('id-ID') %>
+                    </span>
+                    <% if (locals.waliKelas && waliKelas.name) { %>
+                      <span class="text-[10px] text-emerald-600 font-medium block truncate max-w-[130px]" title="Wali Kelas: <%= waliKelas.name %>">
+                        Wali: <%= waliKelas.name.split(',')[0] %>
+                      </span>
+                    <% } else { %>
+                      <span class="text-[10px] text-emerald-600 font-medium block">Tersimpan Aman</span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-4 border-t border-slate-100 text-xs space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-slate-500">Wali Murid:</span>
+                  <span class="font-semibold text-slate-800"><%= studentData.parent_name || '-' %></span>
+                </div>
+                <% if (locals.waliKelas && waliKelas.name) { %>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">Wali Kelas:</span>
+                    <span class="font-semibold text-slate-800"><%= waliKelas.name %></span>
+                  </div>
+                <% } %>
+                <div class="flex justify-between items-center">
+                  <span class="text-slate-500">Status Notifikasi WA:</span>
+                  <% if (studentData.wa_status === 'confirmed') { %>
+                    <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px]">
+                      <i data-lucide="check-circle-2" class="w-3 h-3"></i> Terverifikasi (YA)
+                    </span>
+                  <% } else if (studentData.wa_status === 'intro_sent') { %>
+                    <span class="inline-flex items-center gap-1 text-blue-700 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 text-[10px]">
+                      <i data-lucide="clock" class="w-3 h-3"></i> Menunggu Balas YA
+                    </span>
+                  <% } else { %>
+                    <span class="inline-flex items-center gap-1 text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 text-[10px]">
+                      <i data-lucide="alert-triangle" class="w-3 h-3"></i> Belum Terverifikasi
+                    </span>
+                  <% } %>
+                </div>
               </div>
             </div>
 
-            <div class="mt-6 pt-4 border-t border-slate-100 text-xs space-y-2">
-              <div class="flex justify-between">
-                <span class="text-slate-500">Wali Murid:</span>
-                <span class="font-semibold text-slate-800"><%= studentData.parent_name || '-' %></span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span class="text-slate-500">Status Notifikasi WA:</span>
-                <% if (studentData.wa_status === 'confirmed') { %>
-                  <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px]">
-                    <i data-lucide="check-circle-2" class="w-3 h-3"></i> Terverifikasi (YA)
-                  </span>
-                <% } else if (studentData.wa_status === 'intro_sent') { %>
-                  <span class="inline-flex items-center gap-1 text-blue-700 font-semibold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 text-[10px]">
-                    <i data-lucide="clock" class="w-3 h-3"></i> Menunggu Balas YA
-                  </span>
-                <% } else { %>
-                  <span class="inline-flex items-center gap-1 text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 text-[10px]">
-                    <i data-lucide="alert-triangle" class="w-3 h-3"></i> Belum Terverifikasi
-                  </span>
-                <% } %>
-              </div>
+            <!-- Tombol Ajukan Izin / Sakit Mandiri -->
+            <div class="mt-5 pt-4 border-t border-slate-100">
+              <button type="button" onclick="openLeaveModal()" class="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+                <i data-lucide="file-plus-2" class="w-4 h-4"></i>
+                <span>Ajukan Surat Izin / Sakit</span>
+              </button>
             </div>
           </div>
 
@@ -376,6 +433,209 @@
             </table>
           </div>
         </div>
+
+        <!-- Riwayat Permohonan Izin Siswa -->
+        <% if (locals.recentLeaves && recentLeaves.length > 0) { %>
+          <div class="mt-6 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-blue-600"></i>
+                <h5 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Riwayat Pengajuan Izin / Sakit Mandiri</h5>
+              </div>
+              <span class="text-xs text-slate-500 font-mono"><%= recentLeaves.length %> Pengajuan Terakhir</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                    <th class="px-6 py-3">Tgl Pengajuan</th>
+                    <th class="px-6 py-3">Tipe Izin</th>
+                    <th class="px-6 py-3">Rentang Tanggal</th>
+                    <th class="px-6 py-3">Alasan / Gejala</th>
+                    <th class="px-6 py-3">Surat / Bukti</th>
+                    <th class="px-6 py-3">Status Persetujuan</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <% recentLeaves.forEach(leave => { %>
+                    <tr class="hover:bg-slate-50/50 transition">
+                      <td class="px-6 py-3 font-mono text-slate-500 whitespace-nowrap">
+                        <%= new Date(leave.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                      </td>
+                      <td class="px-6 py-3 whitespace-nowrap">
+                        <% if (leave.type === 'SAKIT') { %>
+                          <span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            🏥 Sakit
+                          </span>
+                        <% } else { %>
+                          <span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-sky-50 text-sky-700 border border-sky-200">
+                            📝 Izin
+                          </span>
+                        <% } %>
+                      </td>
+                      <td class="px-6 py-3 font-semibold text-slate-800 whitespace-nowrap">
+                        <%= leave.start_date === leave.end_date ? leave.start_date : `${leave.start_date} s/d ${leave.end_date}` %>
+                      </td>
+                      <td class="px-6 py-3 text-slate-600 max-w-xs truncate">
+                        <%= leave.reason %>
+                      </td>
+                      <td class="px-6 py-3 whitespace-nowrap">
+                        <% if (leave.attachment) { %>
+                          <a href="<%= leave.attachment %>" target="_blank" class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold underline text-[11px]">
+                            <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Lihat Berkas
+                          </a>
+                        <% } else { %>
+                          <span class="text-slate-400 italic text-[11px]">Tanpa berkas</span>
+                        <% } %>
+                      </td>
+                      <td class="px-6 py-3 whitespace-nowrap">
+                        <% if (leave.status === 'PENDING') { %>
+                          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+                            <i data-lucide="clock" class="w-3 h-3"></i> Menunggu Persetujuan
+                          </span>
+                        <% } else if (leave.status === 'APPROVED') { %>
+                          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200" title="Disetujui oleh <%= leave.reviewer_name || 'Wali Kelas' %>">
+                            <i data-lucide="check-circle-2" class="w-3 h-3"></i> Disetujui
+                          </span>
+                        <% } else { %>
+                          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-rose-50 text-rose-700 border border-rose-200" title="<%= leave.rejection_note || 'Ditolak' %>">
+                            <i data-lucide="x-circle" class="w-3 h-3"></i> Ditolak
+                          </span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        <% } %>
+
+        <!-- Modal Ajukan Izin / Sakit Mandiri -->
+        <div id="leaveRequestModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+          <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 sm:p-7 relative my-8">
+            <button type="button" onclick="closeLeaveModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold flex-shrink-0">
+                <i data-lucide="file-text" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-base">Formulir Pengajuan Izin / Sakit</h3>
+                <p class="text-xs text-slate-500">
+                  Untuk Ananda: <strong class="text-slate-800"><%= studentData.name %></strong> (Kelas <%= studentData.class_name %>)
+                </p>
+              </div>
+            </div>
+
+            <form action="/leaves/submit" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
+              <input type="hidden" name="student_id" value="<%= studentData.id %>">
+              <input type="hidden" name="keyword" value="<%= keyword %>">
+
+              <!-- Kategori Izin / Sakit -->
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1.5">Kategori Ketidakhadiran <span class="text-rose-500">*</span></label>
+                <div class="grid grid-cols-2 gap-3">
+                  <label class="relative flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                    <input type="radio" name="type" value="SAKIT" checked class="text-blue-600 focus:ring-blue-500">
+                    <div>
+                      <span class="font-bold text-slate-800 block">🏥 Sakit</span>
+                      <span class="text-[10px] text-slate-500">Surat Dokter / Rawat</span>
+                    </div>
+                  </label>
+                  <label class="relative flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                    <input type="radio" name="type" value="IZIN" class="text-blue-600 focus:ring-blue-500">
+                    <div>
+                      <span class="font-bold text-slate-800 block">📝 Izin</span>
+                      <span class="text-[10px] text-slate-500">Acara / Kepentingan Keluarga</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Rentang Tanggal -->
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">Tanggal Mulai <span class="text-rose-500">*</span></label>
+                  <input type="date" name="start_date" id="leaveStartDate" value="<%= new Date().toLocaleDateString('en-CA') %>" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">Tanggal Selesai <span class="text-rose-500">*</span></label>
+                  <input type="date" name="end_date" id="leaveEndDate" value="<%= new Date().toLocaleDateString('en-CA') %>" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs">
+                </div>
+              </div>
+
+              <!-- Alasan / Gejala -->
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Keterangan / Alasan Izin <span class="text-rose-500">*</span></label>
+                <textarea name="reason" rows="3" required placeholder="Contoh: Mengalami demam dan batuk sejak semalam, disarankan dokter istirahat selama 2 hari." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"></textarea>
+              </div>
+
+              <!-- Upload Foto Surat Dokter / Bukti -->
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Foto Surat Dokter / Surat Izin Ortu (Opsional)</label>
+                <input type="file" name="letter_attachment" accept="image/*,application/pdf" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                <span class="text-[10px] text-slate-400 mt-1 block">Format: JPG, PNG, atau PDF (Maksimal 5MB)</span>
+              </div>
+
+              <!-- Verifikasi Keamanan: 4 Digit Terakhir No. HP Orang Tua -->
+              <div class="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl">
+                <label class="block font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-amber-600"></i>
+                  Verifikasi Keamanan Wali Murid <span class="text-rose-500">*</span>
+                </label>
+                <p class="text-[11px] text-amber-800 mb-2">
+                  Untuk memastikan pengajuan dilakukan oleh orang tua/wali asli, masukkan <strong>4 digit terakhir</strong> nomor WhatsApp yang terdaftar di sekolah
+                  <% if (studentData.parent_phone) { %>
+                    (Nomor terdaftar: <span class="font-mono font-bold">•••• •••• <%= studentData.parent_phone.replace(/\D/g, '').slice(-4) %></span>)
+                  <% } %>:
+                </p>
+                <input type="text" name="parent_phone_last4" maxlength="4" pattern="\d{4}" required placeholder="Contoh: 7890" class="w-full p-2.5 bg-white border border-amber-300 rounded-xl font-mono text-center tracking-widest text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500">
+              </div>
+
+              <div class="pt-2 flex items-center justify-end gap-3">
+                <button type="button" onclick="closeLeaveModal()" class="px-4 py-2.5 text-slate-600 hover:text-slate-800 font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition">
+                  Batal
+                </button>
+                <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition flex items-center gap-2">
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                  <span>Kirim Permohonan Izin</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <script>
+          function openLeaveModal() {
+            const modal = document.getElementById('leaveRequestModal');
+            if (modal) {
+              modal.classList.remove('hidden');
+              document.body.style.overflow = 'hidden';
+              if (window.lucide) lucide.createIcons();
+            }
+          }
+          function closeLeaveModal() {
+            const modal = document.getElementById('leaveRequestModal');
+            if (modal) {
+              modal.classList.add('hidden');
+              document.body.style.overflow = 'auto';
+            }
+          }
+
+          // Sinkronisasi tanggal mulai dan selesai
+          const startEl = document.getElementById('leaveStartDate');
+          const endEl = document.getElementById('leaveEndDate');
+          if (startEl && endEl) {
+            startEl.addEventListener('change', function() {
+              if (endEl.value < this.value) {
+                endEl.value = this.value;
+              }
+            });
+          }
+        </script>
       </div>
     <% } %>
   </div>

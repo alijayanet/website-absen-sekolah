@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buku Tabungan - <%= student.name %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; padding: 0 !important; }
+      .print-shadow { box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen py-8 px-4 flex flex-col items-center font-sans antialiased text-slate-800">
+
+  <!-- Action Bar (Hidden on Print) -->
+  <div class="no-print max-w-2xl w-full mb-4 flex items-center justify-between">
+    <a href="/dashboard/savings" class="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+      &larr; Kembali ke Tabungan Siswa
+    </a>
+    <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+      Cetak / Simpan PDF
+    </button>
+  </div>
+
+  <!-- Lembar Buku Tabungan -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-8 max-w-2xl w-full shadow-lg print-shadow relative overflow-hidden space-y-6">
+    
+    <!-- Kop Sekolah -->
+    <div class="flex items-center gap-4 pb-4 border-b-2 border-slate-900">
+      <% if (settings.school_logo) { %>
+        <img src="<%= settings.school_logo %>" alt="Logo" class="w-16 h-16 object-contain rounded">
+      <% } else { %>
+        <div class="w-16 h-16 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-2xl">
+          <%= (settings.school_name || 'S').charAt(0) %>
+        </div>
+      <% } %>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-lg font-black text-slate-900 uppercase tracking-tight"><%= settings.school_name || 'SISTEM TABUNGAN SEKOLAH' %></h1>
+        <p class="text-xs text-slate-500 leading-tight"><%= settings.school_address || 'Jl. Pendidikan Sekolah' %></p>
+        <p class="text-[11px] text-slate-400 mt-0.5">Telepon: <%= settings.school_phone || '-' %> &bull; Email: <%= settings.school_email || '-' %></p>
+      </div>
+    </div>
+
+    <!-- Title & Identitas Siswa -->
+    <div class="space-y-3">
+      <div class="text-center pb-2 border-b border-slate-100">
+        <h2 class="text-base font-extrabold text-slate-900 uppercase tracking-wider">LEMBAR BUKU TABUNGAN SISWA</h2>
+        <p class="text-[11px] text-slate-500">Laporan Resmi Mutasi Simpanan Peserta Didik</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <div class="space-y-1">
+          <div><span class="text-slate-400 font-semibold">Nama Siswa:</span> <strong class="text-slate-900 text-sm block"><%= student.name %></strong></div>
+          <div><span class="text-slate-400 font-semibold">NIS / NISN:</span> <span class="font-mono text-slate-700 block"><%= student.nis %> / <%= student.nisn || '-' %></span></div>
+          <div><span class="text-slate-400 font-semibold">Kelas / Rombel:</span> <span class="font-bold text-slate-800 block"><%= student.class_name || '-' %></span></div>
+        </div>
+        <div class="space-y-1">
+          <div><span class="text-slate-400 font-semibold">Nama Wali Murid:</span> <span class="text-slate-800 block"><%= student.parent_name || '-' %></span></div>
+          <div><span class="text-slate-400 font-semibold">Wali Kelas / Pengampu:</span> <span class="font-bold text-slate-800 block"><%= teacher.name %></span></div>
+          <div><span class="text-slate-400 font-semibold">Saldo Saat Ini:</span> <span class="font-mono text-base font-black text-emerald-600 block"><%= formattedBalance %></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabel Mutasi Tabungan -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs border border-slate-200">
+        <thead class="bg-slate-100 text-slate-700 uppercase text-[10px] tracking-wider border-b border-slate-300">
+          <tr>
+            <th class="py-2.5 px-3 border-r border-slate-200">Tanggal</th>
+            <th class="py-2.5 px-3 border-r border-slate-200 text-center">Jenis</th>
+            <th class="py-2.5 px-3 border-r border-slate-200 text-right">Setoran (Rp)</th>
+            <th class="py-2.5 px-3 border-r border-slate-200 text-right">Penarikan (Rp)</th>
+            <th class="py-2.5 px-3 border-r border-slate-200 text-right">Saldo Akhir (Rp)</th>
+            <th class="py-2.5 px-3">Keterangan / Paraf</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 text-slate-700">
+          <% if (transactions.length === 0) { %>
+            <tr>
+              <td colspan="6" class="py-8 text-center text-slate-400">Belum ada riwayat transaksi tabungan yang tercatat.</td>
+            </tr>
+          <% } else { %>
+            <% transactions.forEach(t => { %>
+              <tr>
+                <td class="py-2 px-3 font-mono border-r border-slate-200"><%= t.transaction_date %></td>
+                <td class="py-2 px-3 text-center border-r border-slate-200">
+                  <span class="font-bold <%= t.type === 'SETOR' ? 'text-emerald-700' : 'text-rose-700' %>">
+                    <%= t.type %>
+                  </span>
+                </td>
+                <td class="py-2 px-3 text-right font-mono border-r border-slate-200 text-emerald-700 font-semibold">
+                  <%= t.type === 'SETOR' ? Number(t.amount).toLocaleString('id-ID') : '-' %>
+                </td>
+                <td class="py-2 px-3 text-right font-mono border-r border-slate-200 text-rose-700 font-semibold">
+                  <%= t.type === 'TARIK' ? Number(t.amount).toLocaleString('id-ID') : '-' %>
+                </td>
+                <td class="py-2 px-3 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
+                  <%= Number(t.balance_after).toLocaleString('id-ID') %>
+                </td>
+                <td class="py-2 px-3 text-[11px] text-slate-600">
+                  <%= t.notes || '-' %>
+                </td>
+              </tr>
+            <% }) %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tanda Tangan -->
+    <div class="pt-6 border-t border-slate-200 grid grid-cols-2 gap-4 text-xs">
+      <div class="text-center space-y-12">
+        <div>
+          <span class="text-slate-400">Mengetahui,</span>
+          <p class="font-bold text-slate-800">Orang Tua / Wali Murid</p>
+        </div>
+        <p class="font-semibold text-slate-900 border-t border-slate-300 inline-block px-8 pt-1">
+          ( <%= student.parent_name || '................................' %> )
+        </p>
+      </div>
+
+      <div class="text-center space-y-12">
+        <div>
+          <span class="text-slate-400"><%= settings.school_city || 'Jakarta' %>, <%= new Date().toLocaleDateString('id-ID', { dateStyle: 'long' }) %></span>
+          <p class="font-bold text-slate-800">Wali Kelas / Guru Pengampu</p>
+        </div>
+        <p class="font-semibold text-slate-900 border-t border-slate-300 inline-block px-8 pt-1">
+          ( <%= teacher.name %> )
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer Note -->
+    <div class="text-center pt-2">
+      <p class="text-[10px] text-slate-400">
+        Dicetak secara otomatis melalui Sistem Informasi Absensi & Tabungan Sekolah pada <%= new Date().toLocaleString('id-ID') %>
+      </p>
+    </div>
+
+  </div>
+
+</body>
+</html>

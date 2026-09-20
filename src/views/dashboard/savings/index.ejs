@@ -1,0 +1,679 @@
+<%- include('../../partials/header', { title: pageTitle, isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('../sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header Navbar -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate flex items-center gap-2">
+            <i data-lucide="coins" class="w-5 h-5 text-emerald-600"></i>
+            <span>Tabungan Siswa</span>
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">
+            <%= isGuru ? 'Kelola saldo tabungan dan mutasi siswa rombel Anda' : 'Pantau rekapitulasi total saldo tabungan di setiap guru dan rombel' %>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <% if (isGuru && classData && classData.students.length > 0) { %>
+          <button type="button" onclick="openDepositModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold shadow-sm transition">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">+ Setor Tabungan</span>
+            <span class="sm:hidden">+ Setor</span>
+          </button>
+          <button type="button" onclick="openWithdrawModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200 transition">
+            <i data-lucide="arrow-down-circle" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">- Tarik Saldo</span>
+            <span class="sm:hidden">- Tarik</span>
+          </button>
+        <% } %>
+      </div>
+    </header>
+
+    <div class="p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+      <!-- Flash Alert -->
+      <% if (locals.success) { %>
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-sm">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+            <span><%= success %></span>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (locals.error) { %>
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-3.5 flex items-center justify-between text-rose-800 text-xs font-medium shadow-sm">
+          <div class="flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
+            <span><%= error %></span>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- ======================================================== -->
+      <!-- VIEW KHUSUS ADMIN: REKAPITULASI TOTAL PER GURU / ROMBEL -->
+      <!-- ======================================================== -->
+      <% if (isAdmin) { %>
+        <!-- Metric Cards Global Sekolah -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Total Saldo Sekolah -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">Total Saldo Sekolah</span>
+              <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <p class="text-xl font-extrabold text-emerald-600 font-mono"><%= schoolStats.formattedTotalBalance %></p>
+              <p class="text-[11px] text-slate-500 font-medium mt-0.5"><%= schoolStats.activeSavers %> dari <%= schoolStats.totalStudents %> siswa aktif menabung</p>
+            </div>
+          </div>
+
+          <!-- Total Akumulasi Setor -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">Total Setoran Diterima</span>
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <i data-lucide="trending-up" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <p class="text-xl font-bold text-slate-900 font-mono"><%= schoolStats.formattedTotalDeposit %></p>
+              <p class="text-[11px] text-slate-500 font-medium mt-0.5">Uang masuk tabungan</p>
+            </div>
+          </div>
+
+          <!-- Total Akumulasi Tarik -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">Total Penarikan Saldo</span>
+              <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                <i data-lucide="trending-down" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <p class="text-xl font-bold text-slate-900 font-mono"><%= schoolStats.formattedTotalWithdrawal %></p>
+              <p class="text-[11px] text-slate-500 font-medium mt-0.5">Uang keluar tabungan</p>
+            </div>
+          </div>
+
+          <!-- Total Transaksi -->
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-500">Aktivitas Transaksi</span>
+              <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <p class="text-xl font-bold text-slate-900 font-mono"><%= schoolStats.totalTransactions %></p>
+              <p class="text-[11px] text-indigo-600 font-medium mt-0.5">Total mutasi tercatat</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel Rekapitulasi Total Saldo per Guru / Wali Kelas -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-3">
+          <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <i data-lucide="users" class="w-4 h-4 text-blue-600"></i>
+                <span>Rekapitulasi Total Saldo per Guru & Wali Kelas</span>
+              </h3>
+              <p class="text-[11px] text-slate-500">Ringkasan pertanggungjawaban dana tabungan siswa yang dipegang oleh masing-masing guru</p>
+            </div>
+            <div class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+              Grand Total: <span class="font-mono text-sm"><%= schoolStats.formattedTotalBalance %></span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">No</th>
+                  <th class="py-3 px-4">Guru / Wali Kelas</th>
+                  <th class="py-3 px-4">Kontak WhatsApp</th>
+                  <th class="py-3 px-4">Rombel / Kelas</th>
+                  <th class="py-3 px-4 text-center">Siswa Menabung</th>
+                  <th class="py-3 px-4 text-right">Total Saldo yang Dipegang</th>
+                  <th class="py-3 px-4 text-center">Detail Rombel</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-700">
+                <% if (teacherSummary.length === 0) { %>
+                  <tr>
+                    <td colspan="7" class="py-8 text-center text-slate-400">
+                      Belum ada data guru/wali kelas yang terdaftar di sistem.
+                    </td>
+                  </tr>
+                <% } else { %>
+                  <% teacherSummary.forEach((t, idx) => { %>
+                    <tr class="hover:bg-slate-50/70 transition <%= selectedClassId === t.classId ? 'bg-blue-50/40' : '' %>">
+                      <td class="py-3 px-4 font-mono text-slate-400"><%= idx + 1 %></td>
+                      <td class="py-3 px-4 font-bold text-slate-900 flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                          <%= t.teacherName.charAt(0) %>
+                        </div>
+                        <div>
+                          <span><%= t.teacherName %></span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 font-mono text-slate-600">
+                        <% if (t.teacherPhone && t.teacherPhone !== '-') { %>
+                          <a href="https://wa.me/<%= t.teacherPhone.replace(/[^0-9]/g, '') %>" target="_blank" class="text-blue-600 hover:underline inline-flex items-center gap-1">
+                            <i data-lucide="phone" class="w-3 h-3"></i>
+                            <span><%= t.teacherPhone %></span>
+                          </a>
+                        <% } else { %>
+                          <span class="text-slate-400">-</span>
+                        <% } %>
+                      </td>
+                      <td class="py-3 px-4">
+                        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          <%= t.className %>
+                        </span>
+                      </td>
+                      <td class="py-3 px-4 text-center">
+                        <span class="font-semibold text-slate-800"><%= t.activeSaverCount %></span>
+                        <span class="text-slate-400">/ <%= t.studentCount %> siswa</span>
+                      </td>
+                      <td class="py-3 px-4 text-right font-mono text-sm font-extrabold text-emerald-600">
+                        <%= t.formattedTotalBalance %>
+                      </td>
+                      <td class="py-3 px-4 text-center">
+                        <% if (t.classId) { %>
+                          <a href="/dashboard/savings?class_id=<%= t.classId %>" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg <%= selectedClassId === t.classId ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' %> text-xs font-semibold transition">
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                            <span><%= selectedClassId === t.classId ? 'Sedang Dibuka' : 'Buka Kelas' %></span>
+                          </a>
+                        <% } else { %>
+                          <span class="text-[10px] text-slate-400">Belum ada kelas</span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- ======================================================== -->
+      <!-- VIEW DETAIL KELAS / VIEW KHUSUS GURU                     -->
+      <!-- ======================================================== -->
+      <% if (isGuru && !classData) { %>
+        <!-- Alert jika Guru belum di-assign rombel -->
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center space-y-2">
+          <i data-lucide="alert-triangle" class="w-10 h-10 text-amber-500 mx-auto"></i>
+          <h3 class="text-sm font-bold text-amber-900">Anda Belum Ditugaskan Sebagai Wali Kelas</h3>
+          <p class="text-xs text-amber-700 max-w-md mx-auto">
+            Akun Anda belum dihubungkan dengan rombel kelas manapun. Silakan hubungi Administrator sekolah untuk menetapkan rombel kelas Anda pada menu Data Guru.
+          </p>
+        </div>
+      <% } else if (classData) { %>
+        <!-- Info Banner Rombel -->
+        <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="px-2 py-0.5 rounded bg-blue-500/30 text-blue-200 text-[10px] font-bold uppercase tracking-wider border border-blue-400/20">
+                  Rombel Siswa
+                </span>
+                <span class="text-xs text-slate-300 font-medium">Tahun Ajaran Aktif</span>
+              </div>
+              <h2 class="text-lg sm:text-xl font-black tracking-tight">
+                Tabungan Kelas <%= classData.classInfo.name %>
+              </h2>
+              <p class="text-xs text-slate-300">
+                Wali Kelas / Guru Pengampu: <strong class="text-white"><%= classData.teacher.name %></strong>
+                <% if (classData.teacher.phone && classData.teacher.phone !== '-') { %>
+                  • Kontak WA: <span class="font-mono text-blue-200"><%= classData.teacher.phone %></span>
+                <% } %>
+              </p>
+            </div>
+
+            <!-- Total Saldo Rombel Card -->
+            <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10 sm:text-right shrink-0">
+              <span class="text-[11px] text-blue-200 font-semibold block">Total Saldo di Pegang Wali Kelas:</span>
+              <span class="font-mono text-xl sm:text-2xl font-black text-emerald-300"><%= classData.stats.formattedTotalBalance %></span>
+              <span class="text-[10px] text-slate-300 block"><%= classData.stats.activeSavers %> dari <%= classData.stats.totalStudents %> siswa memiliki saldo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel Siswa Rombel Ini -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="wallet" class="w-4 h-4 text-emerald-600"></i>
+                <span>Daftar Saldo Tabungan Siswa (<%= classData.students.length %> Siswa)</span>
+              </h3>
+              <p class="text-[11px] text-slate-500">
+                <% if (isGuru) { %>
+                  Klik tombol <strong>+ Setor</strong> untuk menambah tabungan, atau <strong>- Tarik</strong> saat siswa mengambil uangnya
+                <% } else { %>
+                  Pantau rincian saldo dan buku tabungan siswa pada rombel ini (Pengelolaan setor & tarik saldo adalah wewenang Wali Kelas)
+                <% } %>
+              </p>
+            </div>
+
+            <% if (isAdmin) { %>
+              <a href="/dashboard/savings" class="text-xs text-blue-600 font-semibold hover:underline inline-flex items-center gap-1">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Kembali ke Ringkasan Semua Guru</span>
+              </a>
+            <% } %>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] tracking-wider border-b border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Siswa</th>
+                  <th class="py-3 px-4">NIS</th>
+                  <th class="py-3 px-4">Wali Murid</th>
+                  <th class="py-3 px-4 text-right">Saldo Tabungan</th>
+                  <th class="py-3 px-4 text-center">Riwayat</th>
+                  <% if (isGuru) { %>
+                    <th class="py-3 px-4 text-center">Aksi Cepat</th>
+                  <% } %>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-700">
+                <% if (classData.students.length === 0) { %>
+                  <tr>
+                    <td colspan="<%= isGuru ? 6 : 5 %>" class="py-8 text-center text-slate-400">
+                      Belum ada siswa yang terdaftar di kelas <%= classData.classInfo.name %>.
+                    </td>
+                  </tr>
+                <% } else { %>
+                  <% classData.students.forEach(s => { %>
+                    <tr class="hover:bg-slate-50/70 transition">
+                      <td class="py-3 px-4">
+                        <div class="flex items-center gap-2.5">
+                          <% if (s.photo) { %>
+                            <img src="<%= s.photo %>" alt="" class="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0">
+                          <% } else { %>
+                            <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
+                              <%= s.name.charAt(0) %>
+                            </div>
+                          <% } %>
+                          <div>
+                            <span class="font-bold text-slate-900 block"><%= s.name %></span>
+                            <span class="text-[10px] text-slate-400"><%= s.gender === 'L' ? 'Laki-laki' : 'Perempuan' %></span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 font-mono font-semibold text-slate-600">
+                        <%= s.nis %>
+                      </td>
+                      <td class="py-3 px-4">
+                        <span class="font-medium text-slate-800 block"><%= s.parent_name || '-' %></span>
+                        <% if (s.parent_phone) { %>
+                          <span class="text-[10px] text-slate-400 font-mono"><%= s.parent_phone %></span>
+                        <% } %>
+                      </td>
+                      <td class="py-3 px-4 text-right font-mono text-sm font-extrabold <%= s.savings_balance > 0 ? 'text-emerald-600' : 'text-slate-400' %>">
+                        <%= formatRupiah(s.savings_balance) %>
+                      </td>
+                      <td class="py-3 px-4 text-center">
+                        <button type="button" 
+                                onclick="viewStudentHistory(<%= s.id %>, '<%= s.name.replace(/'/g, '\\\'') %>')" 
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+                                title="Lihat Buku Tabungan">
+                          <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                          <span><%= s.tx_count || 0 %> Transaksi</span>
+                        </button>
+                      </td>
+                      <% if (isGuru) { %>
+                        <td class="py-3 px-4 text-center">
+                          <div class="flex items-center justify-center gap-1.5">
+                            <!-- Tombol Setor -->
+                            <button type="button" 
+                                    onclick="openDepositForStudent(<%= s.id %>, '<%= s.name.replace(/'/g, '\\\'') %>', <%= s.savings_balance %>)" 
+                                    class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm" 
+                                    title="Setor Tabungan">
+                              <i data-lucide="plus" class="w-3 h-3"></i>
+                              <span>Setor</span>
+                            </button>
+
+                            <!-- Tombol Tarik -->
+                            <button type="button" 
+                                    onclick="openWithdrawForStudent(<%= s.id %>, '<%= s.name.replace(/'/g, '\\\'') %>', <%= s.savings_balance %>)" 
+                                    <%= s.savings_balance <= 0 ? 'disabled' : '' %>
+                                    class="px-2.5 py-1 <%= s.savings_balance <= 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200' %> rounded-lg text-xs font-bold transition flex items-center gap-1" 
+                                    title="<%= s.savings_balance <= 0 ? 'Saldo 0' : 'Tarik Tabungan' %>">
+                              <i data-lucide="minus" class="w-3 h-3"></i>
+                              <span>Tarik</span>
+                            </button>
+                          </div>
+                        </td>
+                      <% } %>
+                    </tr>
+                  <% }) %>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<% if (isGuru) { %>
+<!-- ======================================================== -->
+<!-- MODAL: SETOR TABUNGAN SISWA (+)                          -->
+<!-- ======================================================== -->
+<div id="depositModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+        </div>
+        <span>Setoran Tabungan Siswa</span>
+      </h3>
+      <button type="button" onclick="closeDepositModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <form method="POST" action="/dashboard/savings/deposit" class="space-y-3.5">
+      <input type="hidden" name="return_to" value="/dashboard/savings<%= selectedClassId ? '?class_id=' + selectedClassId : '' %>">
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Siswa</label>
+        <select name="student_id" id="depositStudentSelect" required class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+          <% if (classData && classData.students) { %>
+            <% classData.students.forEach(s => { %>
+              <option value="<%= s.id %>" data-balance="<%= s.savings_balance %>">
+                <%= s.name %> (NIS: <%= s.nis %> • Saldo: <%= formatRupiah(s.savings_balance) %>)
+              </option>
+            <% }) %>
+          <% } %>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Nominal Setoran (Rp)</label>
+        <input type="number" name="amount" id="depositAmountInput" required min="1000" step="1000" placeholder="Contoh: 10000" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        <div class="flex gap-1.5 mt-1.5">
+          <button type="button" onclick="setDepositAmount(2000)" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-mono hover:bg-slate-200">2rb</button>
+          <button type="button" onclick="setDepositAmount(5000)" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-mono hover:bg-slate-200">5rb</button>
+          <button type="button" onclick="setDepositAmount(10000)" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-mono hover:bg-slate-200">10rb</button>
+          <button type="button" onclick="setDepositAmount(20000)" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-mono hover:bg-slate-200">20rb</button>
+          <button type="button" onclick="setDepositAmount(50000)" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-mono hover:bg-slate-200">50rb</button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Transaksi</label>
+        <input type="date" name="transaction_date" value="<%= new Date().toISOString().slice(0, 10) %>" required class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan / Keperluan (Opsional)</label>
+        <input type="text" name="notes" placeholder="Contoh: Setoran uang saku harian" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeDepositModal()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-semibold">Batal</button>
+        <button type="submit" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm">Simpan Setoran</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- MODAL: PENARIKAN TABUNGAN SISWA (-)                      -->
+<!-- ======================================================== -->
+<div id="withdrawModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
+          <i data-lucide="arrow-down-circle" class="w-4 h-4"></i>
+        </div>
+        <span>Penarikan Tabungan Siswa</span>
+      </h3>
+      <button type="button" onclick="closeWithdrawModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <form method="POST" action="/dashboard/savings/withdraw" class="space-y-3.5">
+      <input type="hidden" name="return_to" value="/dashboard/savings<%= selectedClassId ? '?class_id=' + selectedClassId : '' %>">
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Siswa</label>
+        <select name="student_id" id="withdrawStudentSelect" onchange="updateWithdrawMax()" required class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-rose-500 focus:outline-none">
+          <% if (classData && classData.students) { %>
+            <% classData.students.forEach(s => { %>
+              <option value="<%= s.id %>" data-balance="<%= s.savings_balance %>">
+                <%= s.name %> (Saldo: <%= formatRupiah(s.savings_balance) %>)
+              </option>
+            <% }) %>
+          <% } %>
+        </select>
+      </div>
+
+      <!-- Info Saldo Siswa -->
+      <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center text-xs">
+        <span class="text-slate-500 font-medium">Saldo Tersedia:</span>
+        <span class="font-mono font-extrabold text-emerald-600" id="withdrawCurrentBalanceText">Rp 0</span>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Nominal Penarikan (Rp)</label>
+        <input type="number" name="amount" id="withdrawAmountInput" required min="1000" step="1000" placeholder="Contoh: 10000" class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 font-mono font-bold focus:ring-2 focus:ring-rose-500 focus:outline-none">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Penarikan</label>
+        <input type="date" name="transaction_date" value="<%= new Date().toISOString().slice(0, 10) %>" required class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-rose-500 focus:outline-none font-semibold">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Keperluan / Keterangan Penarikan</label>
+        <input type="text" name="notes" placeholder="Contoh: Beli buku gambar / keperluan praktikum" required class="w-full text-xs border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-rose-500 focus:outline-none">
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+        <button type="button" onclick="closeWithdrawModal()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-semibold">Batal</button>
+        <button type="submit" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm">Konfirmasi Penarikan</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
+<!-- ======================================================== -->
+<!-- MODAL: BUKU TABUNGAN & RIWAYAT MUTASI                    -->
+<!-- ======================================================== -->
+<div id="historyModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] flex flex-col">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900" id="histStudentName">Buku Tabungan Siswa</h3>
+          <p class="text-[11px] text-slate-500" id="histStudentMeta">-</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeHistoryModal()" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Saldo & Info Guru -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200 shrink-0">
+      <div>
+        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Saldo Tabungan Saat Ini</span>
+        <span class="font-mono text-xl font-extrabold text-emerald-600" id="histBalance">-</span>
+      </div>
+      <div>
+        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Guru / Wali Kelas Penanggung Jawab</span>
+        <span class="text-xs font-bold text-slate-800 block" id="histTeacherName">-</span>
+        <span class="text-[10px] text-slate-500 font-mono" id="histTeacherPhone">-</span>
+      </div>
+    </div>
+
+    <!-- Scrollable Table -->
+    <div class="overflow-y-auto flex-1 border border-slate-200 rounded-xl">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] tracking-wider border-b border-slate-200 sticky top-0">
+          <tr>
+            <th class="py-2.5 px-3">Tanggal</th>
+            <th class="py-2.5 px-3 text-center">Jenis</th>
+            <th class="py-2.5 px-3 text-right">Nominal</th>
+            <th class="py-2.5 px-3 text-right">Saldo Akhir</th>
+            <th class="py-2.5 px-3">Keterangan</th>
+          </tr>
+        </thead>
+        <tbody id="histTableBody" class="divide-y divide-slate-100 text-slate-700">
+          <tr>
+            <td colspan="5" class="py-8 text-center text-slate-400">Memuat mutasi tabungan...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
+      <a href="#" id="histPrintBtn" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-semibold transition">
+        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+        <span>Cetak Buku Tabungan</span>
+      </a>
+      <button type="button" onclick="closeHistoryModal()" class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition">
+        Tutup
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openDepositModal() {
+    document.getElementById('depositModal').classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+  }
+  function closeDepositModal() {
+    document.getElementById('depositModal').classList.add('hidden');
+  }
+
+  function setDepositAmount(val) {
+    document.getElementById('depositAmountInput').value = val;
+  }
+
+  function openDepositForStudent(studentId, name, balance) {
+    const sel = document.getElementById('depositStudentSelect');
+    if (sel) sel.value = studentId;
+    document.getElementById('depositAmountInput').value = '';
+    openDepositModal();
+  }
+
+  function openWithdrawModal() {
+    updateWithdrawMax();
+    document.getElementById('withdrawModal').classList.remove('hidden');
+    if (window.lucide) window.lucide.createIcons();
+  }
+  function closeWithdrawModal() {
+    document.getElementById('withdrawModal').classList.add('hidden');
+  }
+
+  function updateWithdrawMax() {
+    const sel = document.getElementById('withdrawStudentSelect');
+    if (!sel || !sel.options[sel.selectedIndex]) return;
+    const balance = Number(sel.options[sel.selectedIndex].getAttribute('data-balance')) || 0;
+    const balanceText = 'Rp ' + balance.toLocaleString('id-ID');
+    document.getElementById('withdrawCurrentBalanceText').textContent = balanceText;
+    const amountInput = document.getElementById('withdrawAmountInput');
+    if (amountInput) {
+      amountInput.max = balance;
+    }
+  }
+
+  function openWithdrawForStudent(studentId, name, balance) {
+    const sel = document.getElementById('withdrawStudentSelect');
+    if (sel) sel.value = studentId;
+    updateWithdrawMax();
+    document.getElementById('withdrawAmountInput').value = '';
+    openWithdrawModal();
+  }
+
+  async function viewStudentHistory(studentId, studentName) {
+    const modal = document.getElementById('historyModal');
+    const tableBody = document.getElementById('histTableBody');
+    const printBtn = document.getElementById('histPrintBtn');
+    
+    modal.classList.remove('hidden');
+    tableBody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">Memuat mutasi...</td></tr>';
+    printBtn.href = `/dashboard/savings/student/${studentId}/print`;
+
+    try {
+      const res = await fetch(`/dashboard/savings/student/${studentId}/history`);
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.error || 'Gagal memuat riwayat tabungan.');
+        modal.classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('histStudentName').textContent = data.student.name;
+      document.getElementById('histStudentMeta').textContent = `NIS: ${data.student.nis} • Kelas: ${data.student.className || '-'} • Wali: ${data.student.parentName || '-'}`;
+      document.getElementById('histBalance').textContent = data.student.formattedBalance;
+      document.getElementById('histTeacherName').textContent = data.teacher.name;
+      document.getElementById('histTeacherPhone').textContent = data.teacher.phone || '-';
+
+      if (data.transactions.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">Belum ada catatan mutasi setor/tarik.</td></tr>';
+      } else {
+        tableBody.innerHTML = data.transactions.map(t => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-2 px-3 font-mono text-slate-600">${t.transactionDate}</td>
+            <td class="py-2 px-3 text-center">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${t.type === 'SETOR' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                ${t.type === 'SETOR' ? '+ SETOR' : '- TARIK'}
+              </span>
+            </td>
+            <td class="py-2 px-3 text-right font-mono font-bold ${t.type === 'SETOR' ? 'text-emerald-600' : 'text-rose-600'}">
+              ${t.type === 'SETOR' ? '+' : '-'} ${t.formattedAmount}
+            </td>
+            <td class="py-2 px-3 text-right font-mono font-semibold text-slate-900">
+              ${t.formattedBalanceAfter}
+            </td>
+            <td class="py-2 px-3 text-slate-500">
+              ${t.notes || '-'}
+              <span class="block text-[9px] text-slate-400">oleh: ${t.teacherName}</span>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+    } catch (err) {
+      tableBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-rose-500">Gagal: ${err.message}</td></tr>`;
+    }
+  }
+
+  function closeHistoryModal() {
+    document.getElementById('historyModal').classList.add('hidden');
+  }
+</script>
+
+<%- include('../../partials/footer') %>

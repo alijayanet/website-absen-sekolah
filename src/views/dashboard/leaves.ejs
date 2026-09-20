@@ -1,0 +1,452 @@
+<%- include('../partials/header', { title: 'Pengajuan Izin Siswa', isDashboard: true }) %>
+
+<div class="flex h-screen overflow-hidden bg-slate-50">
+  <%- include('sidebar') %>
+
+  <main class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+    <!-- Header -->
+    <header class="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      <!-- Sisi Kiri: Menu Hamburger & Judul Halaman -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0" title="Buka Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="min-w-0">
+          <h1 class="text-sm sm:text-lg font-extrabold text-slate-900 leading-tight truncate">
+            Pengajuan Izin Siswa
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 font-medium hidden sm:block truncate">
+            Kelola dan verifikasi permohonan izin/sakit mandiri yang diajukan oleh wali murid
+          </p>
+        </div>
+      </div>
+
+      <!-- Sisi Kanan: Action Buttons -->
+      <div class="flex items-center gap-2 shrink-0">
+        <a href="/#cek-kehadiran" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold border border-blue-200 transition">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Halaman Pengajuan Ortu</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+      <!-- Flash Alert Notifikasi -->
+      <% if (successMsg) { %>
+        <div class="flash-alert bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between text-emerald-800 text-xs font-medium shadow-sm transition-all duration-300">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+            <span><%= successMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-emerald-500 hover:text-emerald-700 p-1 rounded-lg hover:bg-emerald-100 transition" title="Tutup">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+
+      <% if (errorMsg) { %>
+        <div class="flash-alert bg-rose-50 border border-rose-200 rounded-xl p-3.5 flex items-center justify-between text-rose-800 text-xs font-medium shadow-sm transition-all duration-300">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0"></i>
+            <span><%= errorMsg %></span>
+          </div>
+          <button type="button" onclick="dismissAlert(this.closest('.flash-alert'))" class="text-rose-500 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-100 transition" title="Tutup">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      <% } %>
+
+      <!-- Ringkasan Statistik Status -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <i data-lucide="folder" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Masuk</p>
+            <p class="text-xl font-extrabold text-slate-900 font-mono"><%= stats.total || 0 %></p>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <i data-lucide="clock" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Menunggu Verifikasi</p>
+            <p class="text-xl font-extrabold text-amber-600 font-mono"><%= stats.pending || 0 %></p>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Telah Disetujui</p>
+            <p class="text-xl font-extrabold text-emerald-600 font-mono"><%= stats.approved || 0 %></p>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+            <i data-lucide="x-circle" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Ditolak</p>
+            <p class="text-xl font-extrabold text-rose-600 font-mono"><%= stats.rejected || 0 %></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Pencarian -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <!-- Status Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-100 text-xs">
+          <a href="/dashboard/leaves?status=ALL<%= classFilter ? '&class_id=' + classFilter : '' %><%= search ? '&search=' + search : '' %>" 
+             class="px-3.5 py-1.5 rounded-lg font-bold transition whitespace-nowrap <%= statusFilter === 'ALL' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100' %>">
+            Semua Permohonan (<%= stats.total || 0 %>)
+          </a>
+          <a href="/dashboard/leaves?status=PENDING<%= classFilter ? '&class_id=' + classFilter : '' %><%= search ? '&search=' + search : '' %>" 
+             class="px-3.5 py-1.5 rounded-lg font-bold transition whitespace-nowrap flex items-center gap-1.5 <%= statusFilter === 'PENDING' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-amber-700 hover:bg-amber-50' %>">
+            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+            <span>Menunggu (<%= stats.pending || 0 %>)</span>
+          </a>
+          <a href="/dashboard/leaves?status=APPROVED<%= classFilter ? '&class_id=' + classFilter : '' %><%= search ? '&search=' + search : '' %>" 
+             class="px-3.5 py-1.5 rounded-lg font-bold transition whitespace-nowrap flex items-center gap-1.5 <%= statusFilter === 'APPROVED' ? 'bg-emerald-600 text-white shadow-sm' : 'text-emerald-700 hover:bg-emerald-50' %>">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            <span>Disetujui (<%= stats.approved || 0 %>)</span>
+          </a>
+          <a href="/dashboard/leaves?status=REJECTED<%= classFilter ? '&class_id=' + classFilter : '' %><%= search ? '&search=' + search : '' %>" 
+             class="px-3.5 py-1.5 rounded-lg font-bold transition whitespace-nowrap flex items-center gap-1.5 <%= statusFilter === 'REJECTED' ? 'bg-rose-600 text-white shadow-sm' : 'text-rose-700 hover:bg-rose-50' %>">
+            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+            <span>Ditolak (<%= stats.rejected || 0 %>)</span>
+          </a>
+        </div>
+
+        <!-- Form Filter Kelas & Pencarian -->
+        <form method="GET" action="/dashboard/leaves" class="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
+          <input type="hidden" name="status" value="<%= statusFilter %>">
+
+          <div class="sm:col-span-<%= currentUser.role === 'admin' ? '7' : '10' %> relative flex items-center">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3"></i>
+            <input type="text" name="search" value="<%= search %>" placeholder="Cari nama siswa, NIS, atau alasan izin..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none font-medium">
+          </div>
+
+          <% if (currentUser.role === 'admin') { %>
+            <div class="sm:col-span-3">
+              <select name="class_id" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium">
+                <option value="">Semua Kelas</option>
+                <% classes.forEach(c => { %>
+                  <option value="<%= c.id %>" <%= classFilter == c.id ? 'selected' : '' %>>Kelas <%= c.name %></option>
+                <% }) %>
+              </select>
+            </div>
+          <% } %>
+
+          <div class="sm:col-span-2 flex gap-2">
+            <button type="submit" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+              <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+              <span>Filter</span>
+            </button>
+            <% if (search || (currentUser.role === 'admin' && classFilter)) { %>
+              <a href="/dashboard/leaves?status=<%= statusFilter %>" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition flex items-center justify-center" title="Reset Filter">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              </a>
+            <% } %>
+          </div>
+        </form>
+      </div>
+
+      <!-- Tabel Daftar Pengajuan Izin -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <th class="px-5 py-3.5">Tgl Pengajuan</th>
+                <th class="px-5 py-3.5">Data Siswa</th>
+                <th class="px-5 py-3.5">Kategori</th>
+                <th class="px-5 py-3.5">Rentang Tanggal</th>
+                <th class="px-5 py-3.5">Alasan / Gejala</th>
+                <th class="px-5 py-3.5">Berkas Bukti</th>
+                <th class="px-5 py-3.5">Status</th>
+                <th class="px-5 py-3.5 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <% if (leaves.length === 0) { %>
+                <tr>
+                  <td colspan="8" class="px-5 py-12 text-center text-slate-400">
+                    <i data-lucide="inbox" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+                    <p class="font-medium">Tidak ada permohonan izin yang sesuai filter.</p>
+                  </td>
+                </tr>
+              <% } %>
+              <% leaves.forEach(item => { %>
+                <tr class="hover:bg-slate-50/50 transition">
+                  <!-- Tanggal Pengajuan -->
+                  <td class="px-5 py-3.5 font-mono text-slate-500 whitespace-nowrap">
+                    <%= new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                    <span class="block text-[10px] text-slate-400 font-mono">
+                      <%= new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) %> WIB
+                    </span>
+                  </td>
+
+                  <!-- Data Siswa -->
+                  <td class="px-5 py-3.5">
+                    <div class="flex items-center gap-3 min-w-[160px]">
+                      <% if (item.student_photo) { %>
+                        <img src="<%= item.student_photo %>" alt="" class="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0">
+                      <% } else { %>
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                          <%= item.student_name.charAt(0) %>
+                        </div>
+                      <% } %>
+                      <div class="min-w-0">
+                        <p class="font-bold text-slate-900 truncate leading-tight"><%= item.student_name %></p>
+                        <p class="text-[10px] text-slate-500 font-mono mt-0.5">
+                          NIS: <%= item.nis %> &bull; <span class="text-blue-600 font-semibold">Kelas <%= item.class_name %></span>
+                        </p>
+                        <p class="text-[10px] text-slate-400">
+                          Wali: <%= item.parent_name || '-' %> (<%= item.parent_phone || '-' %>)
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Kategori Izin -->
+                  <td class="px-5 py-3.5 whitespace-nowrap">
+                    <% if (item.type === 'SAKIT') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        🏥 Sakit
+                      </span>
+                    <% } else { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-sky-50 text-sky-700 border border-sky-200">
+                        📝 Izin
+                      </span>
+                    <% } %>
+                  </td>
+
+                  <!-- Rentang Tanggal -->
+                  <td class="px-5 py-3.5 whitespace-nowrap font-mono text-slate-700 font-medium">
+                    <% if (item.start_date === item.end_date) { %>
+                      <%= item.start_date %>
+                    <% } else { %>
+                      <span class="block"><%= item.start_date %></span>
+                      <span class="text-[10px] text-slate-400">s/d <%= item.end_date %></span>
+                    <% } %>
+                  </td>
+
+                  <!-- Alasan -->
+                  <td class="px-5 py-3.5 max-w-xs">
+                    <p class="text-slate-700 line-clamp-2" title="<%= item.reason %>">
+                      <%= item.reason %>
+                    </p>
+                  </td>
+
+                  <!-- Berkas Bukti -->
+                  <td class="px-5 py-3.5 whitespace-nowrap">
+                    <% if (item.attachment) { %>
+                      <button 
+                        type="button" 
+                        onclick="viewAttachment('<%= item.attachment %>', '<%= item.student_name %>', '<%= item.type %>')"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 font-semibold text-[11px] border border-blue-200 transition"
+                      >
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                        <span>Lihat Bukti</span>
+                      </button>
+                    <% } else { %>
+                      <span class="text-slate-400 italic text-[11px]">Tanpa lampiran</span>
+                    <% } %>
+                  </td>
+
+                  <!-- Status -->
+                  <td class="px-5 py-3.5 whitespace-nowrap">
+                    <% if (item.status === 'PENDING') { %>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+                        <i data-lucide="clock" class="w-3 h-3"></i> Menunggu
+                      </span>
+                    <% } else if (item.status === 'APPROVED') { %>
+                      <div>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <i data-lucide="check-circle-2" class="w-3 h-3"></i> Disetujui
+                        </span>
+                        <% if (item.reviewer_name) { %>
+                          <span class="block text-[10px] text-slate-400 mt-0.5">Oleh: <%= item.reviewer_name %></span>
+                        <% } %>
+                      </div>
+                    <% } else { %>
+                      <div>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-rose-50 text-rose-700 border border-rose-200">
+                          <i data-lucide="x-circle" class="w-3 h-3"></i> Ditolak
+                        </span>
+                        <% if (item.rejection_note) { %>
+                          <span class="block text-[10px] text-rose-500 mt-0.5 max-w-[140px] truncate" title="<%= item.rejection_note %>">
+                            <%= item.rejection_note %>
+                          </span>
+                        <% } %>
+                      </div>
+                    <% } %>
+                  </td>
+
+                  <!-- Aksi -->
+                  <td class="px-5 py-3.5 text-right whitespace-nowrap">
+                    <% if (item.status === 'PENDING') { %>
+                      <div class="flex items-center justify-end gap-1.5">
+                        <!-- Form Setujui -->
+                        <form action="/dashboard/leaves/<%= item.id %>/approve" method="POST" onsubmit="return confirm('Setujui permohonan izin untuk ananda <%= item.student_name %>? Catatan kehadiran pada tanggal tersebut akan otomatis diubah menjadi <%= item.type %>.')">
+                          <button 
+                            type="submit" 
+                            class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm transition flex items-center gap-1 text-[11px]"
+                            title="Setujui Permohonan"
+                          >
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                            <span>Setujui</span>
+                          </button>
+                        </form>
+
+                        <!-- Tombol Tolak -->
+                        <button 
+                          type="button" 
+                          onclick="openRejectModal('<%= item.id %>', '<%= item.student_name %>', '<%= item.type %>')"
+                          class="px-2.5 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-bold rounded-lg transition flex items-center gap-1 text-[11px]"
+                          title="Tolak Permohonan"
+                        >
+                          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                          <span>Tolak</span>
+                        </button>
+                      </div>
+                    <% } else { %>
+                      <span class="text-slate-400 text-[11px]">Selesai</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Pratinjau Bukti / Berkas Surat -->
+<div id="attachmentModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 relative overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+      <div>
+        <h3 id="attachmentModalTitle" class="font-bold text-slate-900 text-sm">Lampiran Surat Izin / Bukti Dokter</h3>
+        <p id="attachmentModalSubtitle" class="text-xs text-slate-500">Nama Siswa</p>
+      </div>
+      <button type="button" onclick="closeAttachmentModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto py-4 flex items-center justify-center min-h-[250px] bg-slate-50 rounded-2xl border border-slate-100 my-2">
+      <img id="attachmentModalImg" src="" alt="Bukti Surat" class="max-h-[60vh] max-w-full object-contain rounded-xl shadow-sm hidden">
+      <iframe id="attachmentModalPdf" src="" class="w-full h-[60vh] rounded-xl hidden"></iframe>
+    </div>
+
+    <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+      <a id="attachmentDownloadLink" href="#" target="_blank" class="text-blue-600 hover:underline font-semibold flex items-center gap-1.5">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Buka / Unduh File Asli</span>
+      </a>
+      <button type="button" onclick="closeAttachmentModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition">
+        Tutup
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tolak Permohonan Izin -->
+<div id="rejectModal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 relative">
+    <button type="button" onclick="closeRejectModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold shrink-0">
+        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm">Tolak Permohonan Izin</h3>
+        <p id="rejectModalStudent" class="text-xs text-slate-500">Nama Siswa</p>
+      </div>
+    </div>
+
+    <form id="rejectForm" method="POST" action="" class="space-y-4 text-xs">
+      <div>
+        <label class="block font-semibold text-slate-700 mb-1.5">Alasan Penolakan <span class="text-rose-500">*</span></label>
+        <textarea name="rejection_note" rows="3" required placeholder="Contoh: Surat bukti tidak jelas / orang tua belum mengonfirmasi secara langsung kepada wali kelas." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"></textarea>
+        <span class="text-[10px] text-slate-400 mt-1 block">Alasan ini akan otomatis dikirimkan ke WhatsApp orang tua murid.</span>
+      </div>
+
+      <div class="pt-2 flex items-center justify-end gap-2">
+        <button type="button" onclick="closeRejectModal()" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition">
+          Batal
+        </button>
+        <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow transition flex items-center gap-1.5">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          <span>Tolak Permohonan</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function viewAttachment(url, studentName, type) {
+    const modal = document.getElementById('attachmentModal');
+    const title = document.getElementById('attachmentModalTitle');
+    const subtitle = document.getElementById('attachmentModalSubtitle');
+    const img = document.getElementById('attachmentModalImg');
+    const pdf = document.getElementById('attachmentModalPdf');
+    const download = document.getElementById('attachmentDownloadLink');
+
+    title.textContent = `Lampiran Bukti ${type === 'SAKIT' ? 'Sakit' : 'Izin'}`;
+    subtitle.textContent = `Siswa: ${studentName}`;
+    download.href = url;
+
+    if (url.toLowerCase().endsWith('.pdf')) {
+      img.classList.add('hidden');
+      pdf.src = url;
+      pdf.classList.remove('hidden');
+    } else {
+      pdf.classList.add('hidden');
+      img.src = url;
+      img.classList.remove('hidden');
+    }
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeAttachmentModal() {
+    const modal = document.getElementById('attachmentModal');
+    modal.classList.add('hidden');
+    document.getElementById('attachmentModalImg').src = '';
+    document.getElementById('attachmentModalPdf').src = '';
+  }
+
+  function openRejectModal(id, studentName, type) {
+    const modal = document.getElementById('rejectModal');
+    const form = document.getElementById('rejectForm');
+    const label = document.getElementById('rejectModalStudent');
+
+    form.action = `/dashboard/leaves/${id}/reject`;
+    label.textContent = `Siswa: ${studentName} (${type})`;
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeRejectModal() {
+    const modal = document.getElementById('rejectModal');
+    modal.classList.add('hidden');
+  }
+</script>
+
+<%- include('../partials/footer') %>

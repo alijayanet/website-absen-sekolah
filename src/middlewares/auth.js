@@ -33,15 +33,36 @@ function attachGlobalData(req, res, next) {
     }
 
     res.locals.settings = settings;
+    let pendingLeavesCount = 0;
+
     if (req.session && req.session.user) {
       if (req.session.user.class_id && !req.session.user.class_name) {
         const cls = db.prepare('SELECT name FROM classes WHERE id = ?').get(req.session.user.class_id);
         req.session.user.class_name = cls ? cls.name : null;
       }
       res.locals.currentUser = req.session.user;
+
+      // Hitung permohonan izin pending
+      try {
+        if (req.session.user.role === 'admin') {
+          const row = db.prepare("SELECT COUNT(*) as c FROM leave_requests WHERE status = 'PENDING'").get();
+          pendingLeavesCount = row ? row.c : 0;
+        } else if (req.session.user.role === 'guru' && req.session.user.class_id) {
+          const row = db.prepare(`
+            SELECT COUNT(*) as c 
+            FROM leave_requests lr 
+            JOIN students s ON lr.student_id = s.id 
+            WHERE lr.status = 'PENDING' AND s.class_id = ?
+          `).get(req.session.user.class_id);
+          pendingLeavesCount = row ? row.c : 0;
+        }
+      } catch (countErr) {
+        pendingLeavesCount = 0;
+      }
     } else {
       res.locals.currentUser = null;
     }
+    res.locals.pendingLeavesCount = pendingLeavesCount;
     res.locals.currentPath = req.path;
   } catch (err) {
     console.error('Error in attachGlobalData middleware:', err);
@@ -55,5 +76,7 @@ function attachGlobalData(req, res, next) {
 module.exports = {
   isAuthenticated,
   isAdmin,
-  attachGlobalData
+  attachGlobalData,
+  requireAuth: isAuthenticated,
+  requireAdmin: isAdmin
 };
