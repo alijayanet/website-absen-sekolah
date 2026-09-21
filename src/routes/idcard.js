@@ -3,6 +3,17 @@ const router = express.Router();
 const { isAuthenticated } = require('../middlewares/auth');
 const idcardService = require('../services/idcard');
 
+function getPresetOptions(req) {
+  return {
+    orientation: req.query.orientation || req.body?.orientation || 'landscape',
+    model: req.query.model || req.body?.model || 'smart',
+    theme: req.query.theme || req.body?.theme || 'navy',
+    side: req.query.side || req.body?.side || 'front',
+    sigType: req.query.sig_type || req.body?.sig_type || 'digital',
+    cutMarks: req.query.cut_marks === '1' || req.body?.cut_marks === '1' || false
+  };
+}
+
 // Cetak Semua Kartu Pelajar (dengan filter opsional class_id, q, wa_status)
 router.get('/dashboard/students/cards/all', isAuthenticated, async (req, res) => {
   try {
@@ -26,7 +37,8 @@ router.get('/dashboard/students/cards/all', isAuthenticated, async (req, res) =>
 
     res.render('idcard-print', {
       students,
-      isBatch: true
+      isBatch: true,
+      preset: getPresetOptions(req)
     });
   } catch (err) {
     console.error('Error print all ID cards:', err);
@@ -51,7 +63,8 @@ router.get('/dashboard/students/cards/selected', isAuthenticated, async (req, re
 
     res.render('idcard-print', {
       students,
-      isBatch: true
+      isBatch: true,
+      preset: getPresetOptions(req)
     });
   } catch (err) {
     console.error('Error GET print selected ID cards:', err);
@@ -77,7 +90,8 @@ router.post('/dashboard/students/cards/selected', isAuthenticated, async (req, r
 
     res.render('idcard-print', {
       students,
-      isBatch: true
+      isBatch: true,
+      preset: getPresetOptions(req)
     });
   } catch (err) {
     console.error('Error POST print selected ID cards:', err);
@@ -100,7 +114,8 @@ router.get('/dashboard/students/:id/card', isAuthenticated, async (req, res) => 
 
     res.render('idcard-print', {
       students: [student],
-      isBatch: false
+      isBatch: false,
+      preset: getPresetOptions(req)
     });
   } catch (err) {
     console.error('Error generate ID card:', err);
@@ -123,7 +138,8 @@ router.get('/dashboard/classes/:id/cards', isAuthenticated, async (req, res) => 
 
     res.render('idcard-print', {
       students,
-      isBatch: true
+      isBatch: true,
+      preset: getPresetOptions(req)
     });
   } catch (err) {
     console.error('Error batch ID cards:', err);

@@ -132,44 +132,164 @@
         </form>
       </div>
 
-      <!-- 2. Sambutan & Foto Kepala Sekolah -->
+      <!-- 2. Profil Kepala Sekolah & Legalisasi Kartu Pelajar -->
       <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 class="font-bold text-slate-900 text-sm mb-1 flex items-center gap-2">
-          <i data-lucide="user-check" class="w-4 h-4 text-blue-600"></i>
-          Sambutan & Foto Kepala Sekolah
-        </h3>
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i data-lucide="award" class="w-4 h-4 text-blue-600"></i>
+            Profil Kepala Sekolah & Legalisasi Kartu Pelajar (Tanda Tangan & Stempel)
+          </h3>
+          <span class="text-[10px] font-bold bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
+            Otomatis Tercetak di Sisi Belakang Kartu
+          </span>
+        </div>
         <p class="text-xs text-slate-500 mb-4">
-          Tampilkan salam pembuka resmi dari Kepala Sekolah kepada wali murid dan masyarakat.
+          Kelola data pimpinan sekolah, tanda tangan digital, cap stempel resmi, serta informasi tempat/tanggal penerbitan kartu identitas pelajar.
         </p>
 
         <form action="/dashboard/cms/principal" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs">
-          <div class="flex flex-col sm:flex-row items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-            <div class="w-16 h-20 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0">
-              <% if (settings.school_principal_photo) { %>
-                <img src="<%= settings.school_principal_photo %>" alt="Kepala Sekolah" class="w-full h-full object-cover">
-              <% } else { %>
-                <i data-lucide="user" class="w-8 h-8 text-slate-400"></i>
+          <!-- Identitas Kepala Sekolah: Nama & NIP -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar Kepala Sekolah *</label>
+              <input type="text" name="school_principal_name" required value="<%= settings.school_principal_name || 'Drs. H. Mulyadi, M.Pd' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">NIP Kepala Sekolah (Opsional)</label>
+              <input type="text" name="school_principal_nip" placeholder="Contoh: 19720315 199802 1 002 (atau kosongkan / beri strip -)" value="<%= settings.school_principal_nip || '' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono">
+              <p class="text-[11px] text-slate-400 mt-1">Kosongkan atau beri tanda strip (-) jika sekolah swasta / yayasan.</p>
+            </div>
+          </div>
+
+          <!-- Pengaturan Legalisasi Kartu: Tempat & Tanggal Penerbitan -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Kota / Tempat Penerbitan Kartu</label>
+              <input type="text" name="card_issue_city" placeholder="Contoh: Cirebon" value="<%= settings.card_issue_city || 'Cirebon' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <p class="text-[11px] text-slate-400 mt-1">Ditampilkan pada format tanggal: [Kota], [Tanggal].</p>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tanggal Penerbitan Kartu</label>
+              <input type="text" name="card_issue_date" placeholder="Contoh: 15 Juli 2026" value="<%= settings.card_issue_date || '15 Juli 2026' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+              <p class="text-[11px] text-slate-400 mt-1">Ditampilkan pada sisi belakang kartu di atas nama Kepala Sekolah.</p>
+            </div>
+          </div>
+
+          <!-- Tiga Kotak Unggah: Tanda Tangan, Cap Stempel & Foto -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+            <!-- 1. Tanda Tangan Digital -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                  <i data-lucide="pen-tool" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Tanda Tangan Digital</span>
+                </label>
+                <% if (settings.school_principal_signature) { %>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Terpasang</span>
+                <% } %>
+              </div>
+
+              <div class="h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-2 relative overflow-hidden shadow-sm">
+                <% if (settings.school_principal_signature) { %>
+                  <img src="<%= settings.school_principal_signature %>" class="max-h-full max-w-full object-contain">
+                <% } else { %>
+                  <div class="text-center text-slate-400">
+                    <i data-lucide="file-signature" class="w-6 h-6 mx-auto mb-1 opacity-50"></i>
+                    <p class="text-[9.5px]">Default Vektor Sistem</p>
+                  </div>
+                <% } %>
+              </div>
+
+              <input type="file" name="school_principal_signature" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded text-slate-600 text-[10px]">
+              <p class="text-[10px] text-slate-400">Disarankan PNG transparan scan tanda tangan asli.</p>
+
+              <% if (settings.school_principal_signature) { %>
+                <label class="flex items-center gap-1.5 text-[10px] text-rose-600 font-semibold cursor-pointer pt-1">
+                  <input type="checkbox" name="remove_signature" value="1" class="rounded border-rose-300 text-rose-600">
+                  <span>Hapus file & gunakan default</span>
+                </label>
               <% } %>
             </div>
-            <div class="flex-1 w-full">
-              <label class="block font-semibold text-slate-700 mb-1">Foto Kepala Sekolah (Rasio Portrait 3:4)</label>
-              <input type="file" name="school_principal_photo" accept="image/*" class="w-full p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 text-[11px]">
+
+            <!-- 2. Cap Stempel Resmi -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                  <i data-lucide="stamp" class="w-3.5 h-3.5 text-indigo-600"></i>
+                  <span>Cap Stempel Sekolah</span>
+                </label>
+                <% if (settings.school_principal_stamp) { %>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Terpasang</span>
+                <% } %>
+              </div>
+
+              <div class="h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-2 relative overflow-hidden shadow-sm">
+                <% if (settings.school_principal_stamp) { %>
+                  <img src="<%= settings.school_principal_stamp %>" class="max-h-full max-w-full object-contain">
+                <% } else { %>
+                  <div class="text-center text-slate-400">
+                    <i data-lucide="stamp" class="w-6 h-6 mx-auto mb-1 opacity-50"></i>
+                    <p class="text-[9.5px]">Default Stempel Bulat</p>
+                  </div>
+                <% } %>
+              </div>
+
+              <input type="file" name="school_principal_stamp" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded text-slate-600 text-[10px]">
+              <p class="text-[10px] text-slate-400">Disarankan cap stempel bulat PNG transparan (biru/ungu).</p>
+
+              <% if (settings.school_principal_stamp) { %>
+                <label class="flex items-center gap-1.5 text-[10px] text-rose-600 font-semibold cursor-pointer pt-1">
+                  <input type="checkbox" name="remove_stamp" value="1" class="rounded border-rose-300 text-rose-600">
+                  <span>Hapus file & gunakan default</span>
+                </label>
+              <% } %>
+            </div>
+
+            <!-- 3. Foto Profil Kepala Sekolah (Landing Page) -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+                  <i data-lucide="user" class="w-3.5 h-3.5 text-slate-600"></i>
+                  <span>Foto Kepala Sekolah</span>
+                </label>
+                <% if (settings.school_principal_photo) { %>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Terpasang</span>
+                <% } %>
+              </div>
+
+              <div class="h-20 bg-white border border-slate-200 rounded-lg flex items-center justify-center p-2 relative overflow-hidden shadow-sm">
+                <% if (settings.school_principal_photo) { %>
+                  <img src="<%= settings.school_principal_photo %>" class="max-h-full max-w-full object-cover rounded">
+                <% } else { %>
+                  <div class="text-center text-slate-400">
+                    <i data-lucide="user" class="w-6 h-6 mx-auto mb-1 opacity-50"></i>
+                    <p class="text-[9.5px]">Belum Ada Foto</p>
+                  </div>
+                <% } %>
+              </div>
+
+              <input type="file" name="school_principal_photo" accept="image/*" class="w-full p-1 bg-white border border-slate-200 rounded text-slate-600 text-[10px]">
+              <p class="text-[10px] text-slate-400">Foto portrait untuk sambutan di web depan.</p>
+
+              <% if (settings.school_principal_photo) { %>
+                <label class="flex items-center gap-1.5 text-[10px] text-rose-600 font-semibold cursor-pointer pt-1">
+                  <input type="checkbox" name="remove_photo" value="1" class="rounded border-rose-300 text-rose-600">
+                  <span>Hapus foto profil</span>
+                </label>
+              <% } %>
             </div>
           </div>
 
+          <!-- Sambutan Kepala Sekolah -->
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap & Gelar Kepala Sekolah</label>
-            <input type="text" name="school_principal_name" value="<%= settings.school_principal_name || 'Drs. H. Mulyadi, M.Pd' %>" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-medium">
+            <label class="block font-semibold text-slate-700 mb-1">Teks Sambutan Kepala Sekolah (Web Profil Depan)</label>
+            <textarea name="school_principal_welcome" rows="3" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.school_principal_welcome || '' %></textarea>
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Teks Sambutan Kepala Sekolah</label>
-            <textarea name="school_principal_welcome" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg leading-relaxed"><%= settings.school_principal_welcome || '' %></textarea>
-          </div>
-
-          <div>
-            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
-              Simpan Sambutan Kepala Sekolah
+            <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span>Simpan Profil & Legalisasi Kartu</span>
             </button>
           </div>
         </form>

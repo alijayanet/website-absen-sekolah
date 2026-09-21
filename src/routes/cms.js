@@ -19,7 +19,7 @@ const imageFilter = (req, file, cb) => {
 // 1. Upload Logo & Banner
 const generalStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (file.fieldname === 'school_logo') {
+    if (file.fieldname === 'school_logo' || file.fieldname === 'school_principal_stamp') {
       cb(null, config.logosPath);
     } else if (file.fieldname === 'school_hero_image') {
       cb(null, config.bannersPath);
@@ -101,21 +101,48 @@ router.post('/dashboard/cms/profile', isAuthenticated, isAdmin, uploadGeneral.fi
   }
 });
 
-// 2. Simpan Sambutan Kepala Sekolah
-router.post('/dashboard/cms/principal', isAuthenticated, isAdmin, uploadGeneral.single('school_principal_photo'), (req, res) => {
+// 2. Simpan Sambutan, Profil Kepala Sekolah, Tanda Tangan & Cap Stempel
+router.post('/dashboard/cms/principal', isAuthenticated, isAdmin, uploadGeneral.fields([
+  { name: 'school_principal_photo', maxCount: 1 },
+  { name: 'school_principal_signature', maxCount: 1 },
+  { name: 'school_principal_stamp', maxCount: 1 }
+]), (req, res) => {
   try {
-    const { school_principal_name, school_principal_welcome } = req.body;
+    const {
+      school_principal_name,
+      school_principal_nip,
+      school_principal_welcome,
+      card_issue_city,
+      card_issue_date,
+      remove_signature,
+      remove_stamp,
+      remove_photo
+    } = req.body;
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
-    if (school_principal_name) upsert.run('school_principal_name', school_principal_name.trim());
-    if (school_principal_welcome) upsert.run('school_principal_welcome', school_principal_welcome.trim());
+    if (typeof school_principal_name !== 'undefined') upsert.run('school_principal_name', school_principal_name.trim());
+    if (typeof school_principal_nip !== 'undefined') upsert.run('school_principal_nip', school_principal_nip.trim());
+    if (typeof school_principal_welcome !== 'undefined') upsert.run('school_principal_welcome', school_principal_welcome.trim());
+    if (typeof card_issue_city !== 'undefined') upsert.run('card_issue_city', card_issue_city.trim());
+    if (typeof card_issue_date !== 'undefined') upsert.run('card_issue_date', card_issue_date.trim());
 
-    if (req.file) {
-      const photoUrl = `/uploads/photos/${req.file.filename}`;
-      upsert.run('school_principal_photo', photoUrl);
+    if (remove_signature === '1') upsert.run('school_principal_signature', '');
+    if (remove_stamp === '1') upsert.run('school_principal_stamp', '');
+    if (remove_photo === '1') upsert.run('school_principal_photo', '');
+
+    if (req.files) {
+      if (req.files['school_principal_photo'] && req.files['school_principal_photo'][0]) {
+        upsert.run('school_principal_photo', `/uploads/photos/${req.files['school_principal_photo'][0].filename}`);
+      }
+      if (req.files['school_principal_signature'] && req.files['school_principal_signature'][0]) {
+        upsert.run('school_principal_signature', `/uploads/photos/${req.files['school_principal_signature'][0].filename}`);
+      }
+      if (req.files['school_principal_stamp'] && req.files['school_principal_stamp'][0]) {
+        upsert.run('school_principal_stamp', `/uploads/logos/${req.files['school_principal_stamp'][0].filename}`);
+      }
     }
 
-    res.redirect('/dashboard/cms?success=Sambutan dan foto Kepala Sekolah berhasil diperbarui.');
+    res.redirect('/dashboard/cms?success=Data Kepala Sekolah, Tanda Tangan & Cap Stempel Legalisasi berhasil diperbarui.');
   } catch (err) {
     res.redirect(`/dashboard/cms?error=${encodeURIComponent(err.message)}`);
   }

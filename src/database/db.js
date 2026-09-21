@@ -105,7 +105,12 @@ const defaultSettings = [
   { key: 'qris_static_payload', value: '00020101021126570011ID.DANA.WWW011893600915346519740402094651974040303UMI51440014ID.CO.QRIS.WWW0215ID10232708012520303UMI5204549953033605802ID5907ALIJAYA6014Kab. Indramayu6105452576304E962' },
   { key: 'qris_merchant_name', value: 'SMK Teladan Jakarta' },
   { key: 'qris_static_enabled', value: '1' },
-  { key: 'payment_gateway_secret', value: 'absensi-sekolah-gateway-secret' }
+  { key: 'payment_gateway_secret', value: 'absensi-sekolah-gateway-secret' },
+  { key: 'school_principal_nip', value: '19720315 199802 1 002' },
+  { key: 'card_issue_city', value: 'Cirebon' },
+  { key: 'card_issue_date', value: '15 Juli 2026' },
+  { key: 'school_principal_signature', value: '' },
+  { key: 'school_principal_stamp', value: '' }
 ];
 
 const checkSetting = db.prepare('SELECT value FROM settings WHERE key = ?');

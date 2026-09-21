@@ -33,6 +33,7 @@ const uploadLetter = multer({
 router.get('/', (req, res) => {
   const keyword = (req.query.q || '').trim();
   let studentData = null;
+  let multipleStudents = [];
   let attendanceSummary = null;
   let recentAttendances = [];
   let recentLeaves = [];
@@ -41,17 +42,30 @@ router.get('/', (req, res) => {
   const leaveSuccess = req.query.leave_success || null;
   const leaveError = req.query.leave_error || null;
 
-
   if (keyword) {
-    // Cari data siswa berdasarkan NIS atau NISN
-    studentData = db.prepare(`
+    // 1. Coba cari exact match NIS atau NISN terlebih dahulu
+    let matchedStudents = db.prepare(`
       SELECT s.*, c.name as class_name 
       FROM students s 
       LEFT JOIN classes c ON s.class_id = c.id 
       WHERE (s.nis = ? OR s.nisn = ?) AND s.is_active = 1
-    `).get(keyword, keyword);
+    `).all(keyword, keyword);
 
-    if (studentData) {
+    // 2. Jika tidak cocok dengan NIS/NISN, cari berdasarkan Nama Siswa (case-insensitive LIKE)
+    if (matchedStudents.length === 0) {
+      matchedStudents = db.prepare(`
+        SELECT s.*, c.name as class_name 
+        FROM students s 
+        LEFT JOIN classes c ON s.class_id = c.id 
+        WHERE s.name LIKE ? AND s.is_active = 1
+        ORDER BY s.name ASC
+        LIMIT 10
+      `).all(`%${keyword}%`);
+    }
+
+    if (matchedStudents.length === 1) {
+      studentData = matchedStudents[0];
+
       // Ambil Guru / Wali Kelas penanggung jawab rombel
       waliKelas = db.prepare(`
         SELECT u.name, u.phone 
@@ -103,8 +117,10 @@ router.get('/', (req, res) => {
         total: stats.total || 0,
         persentase: stats.total > 0 ? Math.round(((stats.hadir + stats.terlambat) / stats.total) * 100) : 0
       };
+    } else if (matchedStudents.length > 1) {
+      multipleStudents = matchedStudents;
     } else {
-      errorMsg = `Data siswa dengan NIS/NISN "${keyword}" tidak ditemukan. Pastikan nomor yang dimasukkan sudah benar.`;
+      errorMsg = `Data siswa dengan nama, NIS, atau NISN "${keyword}" tidak ditemukan. Pastikan nama atau nomor yang dimasukkan sudah benar.`;
     }
   }
 
@@ -130,6 +146,7 @@ router.get('/', (req, res) => {
   res.render('landing', {
     keyword,
     studentData,
+    multipleStudents,
     attendanceSummary,
     recentAttendances,
     recentLeaves,
