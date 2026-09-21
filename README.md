@@ -473,10 +473,6 @@ Sistem ini dikembangkan dan dipelihara secara aktif oleh:
 * **GitHub**: [@alijayanet](https://github.com/alijayanet)
 * **Repository**: [alijayanet/website-absen-sekolah](https://github.com/alijayanet/website-absen-sekolah)
 
-### Layanan Bantuan & Konsultasi:
-- Pendampingan instalasi dan konfigurasi server sekolah (Local LAN Server maupun Cloud VPS).
-- Integrasi perangkat keras presensi: Barcode Scanner, Mesin Pembaca RFID USB, dan Pengadaan Kartu PVC Standar CR80.
-- Kustomisasi format kuitansi, tagihan SPP berkala, dan format laporan dinas pendidikan setempat.
 
 ---
 
