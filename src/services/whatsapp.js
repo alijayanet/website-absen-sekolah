@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const QRCode = require('qrcode');
 const path = require('path');
@@ -9,6 +9,171 @@ const botService = require('./bot');
 
 const { waLidStore } = require('./waLidStore');
 
+// Cache Store Berkinerja Tinggi untuk Baileys Signal Keys & Retries (Anti 'Waiting for this message')
+class BaileysCacheStore {
+  constructor(ttlMs = 600000, maxSize = 5000) {
+    this.cache = new Map();
+    this.ttlMs = ttlMs;
+    this.maxSize = maxSize;
+  }
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return undefined;
+    if (Date.now() - item.time > this.ttlMs) {
+      this.cache.delete(key);
+      return undefined;
+    }
+    return item.val;
+  }
+  set(key, val) {
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    this.cache.set(key, { val, time: Date.now() });
+  }
+  del(key) {
+    this.cache.delete(key);
+  }
+  flushAll() {
+    this.cache.clear();
+  }
+}
+
+// Multi-Layer Message Store (Memory LRU + Database Fallback) untuk menangani permintaan retry dekripsi WhatsApp
+class MultiLayerMessageStore {
+  constructor(maxSize = 5000) {
+    this.store = new Map();
+    this.maxSize = maxSize;
+  }
+
+  cache(key, message) {
+    if (!key || !key.id || !message) return;
+    const msgId = String(key.id);
+    const remote = String(key.remoteJid || '');
+    const combinedKey = `${remote}:${msgId}`;
+
+    let protoMsg = message;
+    if (message.message) protoMsg = message.message;
+
+    this.store.set(combinedKey, protoMsg);
+    this.store.set(msgId, protoMsg);
+
+    if (this.store.size > this.maxSize * 2) {
+      const keysToDelete = Array.from(this.store.keys()).slice(0, 500);
+      for (const k of keysToDelete) this.store.delete(k);
+    }
+  }
+
+  async get(key) {
+    if (!key || !key.id) return undefined;
+    const msgId = String(key.id);
+    const remote = String(key.remoteJid || '');
+    const combinedKey = `${remote}:${msgId}`;
+
+    if (this.store.has(combinedKey)) {
+      return this.store.get(combinedKey);
+    }
+    if (this.store.has(msgId)) {
+      return this.store.get(msgId);
+    }
+
+    for (const [k, v] of this.store.entries()) {
+      if (k.endsWith(`:${msgId}`) || k === msgId) {
+        return v;
+      }
+    }
+
+    // Database Fallback dari wa_queue jika ada
+    try {
+      const row = db.prepare('SELECT message FROM wa_queue WHERE phone LIKE ? ORDER BY id DESC LIMIT 1').get(`%${remote.split('@')[0]}%`);
+      if (row && row.message) {
+        return { conversation: row.message };
+      }
+    } catch (_) {}
+
+    return undefined;
+  }
+}
+
+/**
+ * Membersihkan file session dan pre-key usang jika terjadi Bad MAC desync
+ * tanpa menghapus creds.json (tidak perlu scan QR ulang)
+ */
+function cleanStaleSessionKeys(authFolder) {
+  try {
+    const folder = authFolder || config.baileysAuthPath;
+    if (!fs.existsSync(folder)) return 0;
+    const files = fs.readdirSync(folder);
+    let cleaned = 0;
+    for (const f of files) {
+      if (f.startsWith('session-') || f.startsWith('pre-key-') || f.startsWith('sender-key-') || f.startsWith('app-state-sync-')) {
+        try {
+          fs.unlinkSync(path.join(folder, f));
+          cleaned++;
+        } catch (_) {}
+      }
+    }
+    console.log(`[WA Session Auto-Repair] Membersihkan ${cleaned} session/pre-key usang (creds.json tetap dipertahankan).`);
+    return cleaned;
+  } catch (err) {
+    console.warn(`[WA Session Auto-Repair] Gagal membersihkan session keys: ${err.message}`);
+    return 0;
+  }
+}
+
+let authLidReverse = new Map();
+
+function loadAuthLidReverseMap(authFolder) {
+  try {
+    const folder = authFolder || config.baileysAuthPath;
+    if (!fs.existsSync(folder)) return;
+    const files = fs.readdirSync(folder);
+    const next = new Map();
+    for (const f of files) {
+      const forward = /^lid-mapping-(\d+)\.json$/i.exec(f);
+      const reverse = /^lid-mapping-(\d+)_reverse\.json$/i.exec(f);
+      if (!forward && !reverse) continue;
+
+      const raw = fs.readFileSync(path.join(folder, f), 'utf8');
+      let value = null;
+      try {
+        value = JSON.parse(raw);
+      } catch (e) {
+        value = String(raw || '').trim().replace(/^"|"$/g, '');
+      }
+
+      if (forward) {
+        let phoneDigits = forward[1].replace(/\D/g, '');
+        if (phoneDigits.startsWith('0')) phoneDigits = '62' + phoneDigits.slice(1);
+        else if (phoneDigits.startsWith('8')) phoneDigits = '62' + phoneDigits;
+        const lidDigits = String(value || '').replace(/\D/g, '');
+        if (!phoneDigits || !lidDigits) continue;
+        next.set(lidDigits + '@lid', phoneDigits);
+        next.set(lidDigits, phoneDigits);
+        continue;
+      }
+
+      if (reverse) {
+        const lidDigits = String(reverse[1] || '').replace(/\D/g, '');
+        let phoneDigits = String(value || '').replace(/\D/g, '');
+        if (phoneDigits.startsWith('0')) phoneDigits = '62' + phoneDigits.slice(1);
+        else if (phoneDigits.startsWith('8')) phoneDigits = '62' + phoneDigits;
+        if (!phoneDigits || !lidDigits) continue;
+        next.set(lidDigits + '@lid', phoneDigits);
+        next.set(lidDigits, phoneDigits);
+        continue;
+      }
+    }
+    authLidReverse = next;
+    if (authLidReverse.size > 0) {
+      console.log(`[WA LID Reverse Map] Memuat ${authLidReverse.size} pemetaan LID otomatis dari folder auth.`);
+    }
+  } catch (e) {
+    console.warn(`[WA LID Reverse Map] Gagal memuat auth lid reverse map: ${e.message}`);
+  }
+}
+
 class WhatsAppService {
   constructor() {
     this.sock = null;
@@ -17,6 +182,12 @@ class WhatsAppService {
     this.userJid = null;
     this.isInitializing = false;
     this.waLidStore = waLidStore;
+
+    // Cache stores
+    this.msgRetryCounterCache = new BaileysCacheStore(600000);
+    this.userDevicesCache = new BaileysCacheStore(3600000);
+    this.placeholderResendCache = new BaileysCacheStore(600000);
+    this.messageStore = new MultiLayerMessageStore(5000);
   }
 
   // Format nomor HP Indonesia (08... / +62... -> 628...@s.whatsapp.net)
@@ -105,7 +276,8 @@ class WhatsAppService {
             const lidUser = lidJid.split('@')[0];
             waLidStore.set(lidJid, formatted);
             waLidStore.set(lidUser, formatted);
-            console.log(`[WhatsApp LID] Terpetakan: ${formatted} -> ${lidJid}`);
+            authLidReverse.set(lidJid, formatted);
+            authLidReverse.set(lidUser, formatted);
 
             if (targetLidUser && (lidUser === targetLidUser || lidJid.includes(targetLidUser))) {
               return formatted;
@@ -152,13 +324,17 @@ class WhatsAppService {
       const lidJid = jid.endsWith('@lid') ? jid : msg.key.senderLid;
       const lidUser = lidJid.split('@')[0];
 
-      // 3a. Cek waLidStore cache
+      // 3a. Cek authLidReverse
+      const fromAuth = authLidReverse.get(lidJid) || authLidReverse.get(lidUser);
+      if (fromAuth) return fromAuth;
+
+      // 3b. Cek waLidStore cache
       const cached = waLidStore.get(lidJid) || waLidStore.get(lidUser);
       if (cached) {
         return cached.replace(/\D/g, '');
       }
 
-      // 3b. Cek signalRepository jika ada (Baileys v7)
+      // 3c. Cek signalRepository jika ada (Baileys v7)
       if (this.sock?.signalRepository?.lidMapping?.getPNForLID) {
         try {
           const pnjid = await this.sock.signalRepository.lidMapping.getPNForLID(lidJid);
@@ -166,23 +342,27 @@ class WhatsAppService {
             const p = pnjid.split('@')[0].replace(/\D/g, '');
             waLidStore.set(lidJid, p);
             waLidStore.set(lidUser, p);
+            authLidReverse.set(lidJid, p);
+            authLidReverse.set(lidUser, p);
             return p;
           }
         } catch (e) {}
       }
 
-      // 3c. Cek kecocokan session di auth folder (remoteIdentityKey)
+      // 3d. Cek kecocokan session di auth folder (remoteIdentityKey)
       try {
         const matchPhone = this.findPhoneByLidInAuth(lidUser);
         if (matchPhone) {
           waLidStore.set(lidJid, matchPhone);
           waLidStore.set(lidUser, matchPhone);
+          authLidReverse.set(lidJid, matchPhone);
+          authLidReverse.set(lidUser, matchPhone);
           console.log(`[WhatsApp LID] Ditemukan dari Auth Session: ${lidUser} -> ${matchPhone}`);
           return matchPhone;
         }
       } catch (e) {}
 
-      // 3d. Coba on-demand pre-resolve terhadap seluruh nomor di database
+      // 3e. Coba on-demand pre-resolve terhadap seluruh nomor di database
       try {
         const found = await this.preResolveAllLids(lidUser);
         if (found) {
@@ -195,6 +375,15 @@ class WhatsAppService {
     return jid.split('@')[0].replace(/\D/g, '');
   }
 
+  // Pembersihan manual session/pre-keys usang tanpa hapus creds.json
+  cleanStaleSessionKeys(doReconnect = true) {
+    const cleaned = cleanStaleSessionKeys(config.baileysAuthPath);
+    if (doReconnect) {
+      this.reconnect();
+    }
+    return cleaned;
+  }
+
   async initWhatsApp() {
     if (this.isInitializing) return;
     this.isInitializing = true;
@@ -202,20 +391,98 @@ class WhatsAppService {
 
     try {
       const { state, saveCreds } = await useMultiFileAuthState(config.baileysAuthPath);
-      const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1015901307] }));
+      loadAuthLidReverseMap(config.baileysAuthPath);
+
+      let version = [2, 3000, 1043857760]; // Modern WhatsApp Web version fallback
+      try {
+        const latest = await fetchLatestBaileysVersion();
+        if (latest && latest.version) {
+          version = latest.version;
+        }
+      } catch (err) {
+        console.warn(`[WhatsApp] Gagal mengambil versi terbaru Baileys (${err.message}). Menggunakan fallback.`);
+      }
 
       this.sock = makeWASocket({
         version,
-        logger: pino({ level: 'silent' }),
-        printQRInTerminal: false,
         auth: state,
-        browser: ['Absensi Sekolah Bot', 'Chrome', '1.0.0'],
+        browser: Browsers.ubuntu('Chrome'),
+        syncFullHistory: false,
+        markOnlineOnConnect: true,
+        generateHighQualityLinkPreview: false,
+        msgRetryCounterCache: this.msgRetryCounterCache,
+        userDevicesCache: this.userDevicesCache,
+        placeholderResendCache: this.placeholderResendCache,
+        retryRequestDelayMs: 250,
+        maxMsgRetryCount: 5,
+        keepAliveIntervalMs: 30000,
         connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 0,
-        keepAliveIntervalMs: 10000
+        defaultQueryTimeoutMs: 60000,
+        appStateMacVerification: {
+          patch: false,
+          snapshot: false
+        },
+        patchMessageBeforeSending: (message) => {
+          const requiresPatch = !!(
+            message.buttonsMessage ||
+            message.templateMessage ||
+            message.listMessage
+          );
+          if (requiresPatch) {
+            message = {
+              viewOnceMessage: {
+                message: {
+                  messageContextInfo: {
+                    deviceListMetadataVersion: 2,
+                    deviceListMetadata: {},
+                  },
+                  ...message,
+                },
+              },
+            };
+          }
+          return message;
+        },
+        getMessage: async (key) => {
+          return await this.messageStore.get(key);
+        },
+        logger: pino({ level: 'silent' }),
+        printQRInTerminal: false
       });
 
-      this.sock.ev.on('creds.update', saveCreds);
+      this.sock.ev.on('creds.update', () => {
+        saveCreds();
+        loadAuthLidReverseMap(config.baileysAuthPath);
+      });
+
+      // Sinkronisasi Kontak Masuk untuk Pemetaan LID Real-Time
+      this.sock.ev.on('contacts.upsert', (contacts) => {
+        for (const contact of contacts) {
+          if (contact.id && contact.id.endsWith('@lid') && contact.phoneNumber) {
+            let digits = String(contact.phoneNumber).replace(/\D/g, '');
+            if (digits.startsWith('0')) digits = '62' + digits.slice(1);
+            else if (digits.startsWith('8')) digits = '62' + digits;
+            this.waLidStore.set(contact.id, digits);
+            authLidReverse.set(contact.id, digits);
+            authLidReverse.set(contact.id.split('@')[0], digits);
+          }
+        }
+      });
+
+      this.sock.ev.on('messaging-history.set', ({ contacts }) => {
+        if (contacts) {
+          for (const contact of contacts) {
+            if (contact.id && contact.id.endsWith('@lid') && contact.phoneNumber) {
+              let digits = String(contact.phoneNumber).replace(/\D/g, '');
+              if (digits.startsWith('0')) digits = '62' + digits.slice(1);
+              else if (digits.startsWith('8')) digits = '62' + digits;
+              this.waLidStore.set(contact.id, digits);
+              authLidReverse.set(contact.id, digits);
+              authLidReverse.set(contact.id.split('@')[0], digits);
+            }
+          }
+        }
+      });
 
       this.sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
@@ -232,20 +499,30 @@ class WhatsAppService {
 
         if (connection === 'close') {
           const statusCode = lastDisconnect?.error?.output?.statusCode;
+          const errorMsg = lastDisconnect?.error?.message || '';
           const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
           this.status = 'disconnected';
           this.qrCodeDataUrl = null;
           this.userJid = null;
-          console.log(`[WhatsApp] Koneksi terputus (Status: ${statusCode}). Reconnect: ${shouldReconnect}`);
+
+          // Auto-repair jika terjadi desinkronisasi sesi / Bad MAC
+          const isBadMac = errorMsg.includes('Bad MAC') || errorMsg.includes('MAC mismatch') || statusCode === 401;
+          if (isBadMac && statusCode !== DisconnectReason.loggedOut) {
+            console.warn(`[WhatsApp Auto-Repair] Terdeteksi desinkronisasi sesi/Bad MAC (${errorMsg}). Membersihkan pre-key usang...`);
+            cleanStaleSessionKeys(config.baileysAuthPath);
+          }
+
+          console.log(`[WhatsApp] Koneksi terputus (Status: ${statusCode}, Msg: ${errorMsg}). Reconnect: ${shouldReconnect}`);
 
           if (shouldReconnect) {
+            const delay = statusCode === DisconnectReason.restartRequired ? 500 : 3000;
             setTimeout(() => {
               this.isInitializing = false;
               this.initWhatsApp();
-            }, 3000);
+            }, delay);
           } else {
             this.isInitializing = false;
-            // Jika logout, bersihkan direktori sesi
+            // Jika logout resmi, bersihkan direktori sesi
             try {
               fs.rmSync(config.baileysAuthPath, { recursive: true, force: true });
               fs.mkdirSync(config.baileysAuthPath, { recursive: true });
@@ -265,8 +542,15 @@ class WhatsAppService {
         }
       });
 
-      // Tangani Pesan Masuk via Bot Service
+      // Tangani Pesan Masuk via Bot Service & Cache ke MessageStore
       this.sock.ev.on('messages.upsert', async (m) => {
+        if (m.messages) {
+          for (const msg of m.messages) {
+            if (msg.key && msg.message) {
+              this.messageStore.cache(msg.key, msg.message);
+            }
+          }
+        }
         await botService.handleMessage(this, m);
       });
 
@@ -285,7 +569,11 @@ class WhatsAppService {
     const jid = to.includes('@') ? to : this.formatJid(to);
     if (!jid) throw new Error('Format nomor tujuan tidak valid');
 
-    return await this.sock.sendMessage(jid, { text: message });
+    const result = await this.sock.sendMessage(jid, { text: message });
+    if (result && result.key && result.message) {
+      this.messageStore.cache(result.key, result.message);
+    }
+    return result;
   }
 
   async sendImageMessage(to, imageBuffer, caption = '') {
@@ -296,10 +584,34 @@ class WhatsAppService {
     const jid = to.includes('@') ? to : this.formatJid(to);
     if (!jid) throw new Error('Format nomor tujuan tidak valid');
 
-    return await this.sock.sendMessage(jid, {
+    const result = await this.sock.sendMessage(jid, {
       image: imageBuffer,
       caption: caption || ''
     });
+    if (result && result.key && result.message) {
+      this.messageStore.cache(result.key, result.message);
+    }
+    return result;
+  }
+
+  async sendDocumentMessage(to, documentBuffer, filename = 'Dokumen.pdf', caption = '', mimetype = 'application/pdf') {
+    if (this.status !== 'connected' || !this.sock) {
+      throw new Error('WhatsApp tidak terkoneksi saat ini');
+    }
+
+    const jid = to.includes('@') ? to : this.formatJid(to);
+    if (!jid) throw new Error('Format nomor tujuan tidak valid');
+
+    const result = await this.sock.sendMessage(jid, {
+      document: documentBuffer,
+      fileName: filename,
+      mimetype: mimetype || 'application/pdf',
+      caption: caption || ''
+    });
+    if (result && result.key && result.message) {
+      this.messageStore.cache(result.key, result.message);
+    }
+    return result;
   }
 
   getStatus() {

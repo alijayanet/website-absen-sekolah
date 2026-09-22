@@ -73,6 +73,16 @@ router.post('/dashboard/whatsapp/reconnect', isAuthenticated, isAdmin, async (re
   }
 });
 
+// Bersihkan Cache Pre-Keys & Sesi Usang (Anti-Waiting & Bad MAC Auto-Repair)
+router.post('/dashboard/whatsapp/repair-keys', isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const cleaned = await whatsapp.cleanStaleSessionKeys();
+    res.redirect(`/dashboard/whatsapp?success=Berhasil membersihkan ${cleaned} berkas sesi/pre-key usang. WhatsApp sedang menghubungkan ulang tanpa perlu scan QR.`);
+  } catch (err) {
+    res.redirect(`/dashboard/whatsapp?error=${encodeURIComponent(err.message)}`);
+  }
+});
+
 // Logout Sesi WhatsApp
 router.post('/dashboard/whatsapp/logout', isAuthenticated, isAdmin, async (req, res) => {
   try {
