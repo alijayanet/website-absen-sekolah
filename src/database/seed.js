@@ -35,6 +35,7 @@ function seedDatabase() {
     ['hari_aktif', 'Senin – Jumat'],
     ['wa_auto_teacher_summary', '0'],
     ['jam_rekap_guru', '09:00'],
+    ['scheduler_timezone', 'Asia/Jakarta'],
     ['last_auto_teacher_summary_date', ''],
     ['wa_enabled', '1'],
     ['wa_template_absen', 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nDiberitahukan bahwa ananda telah melakukan absensi di sekolah:\n📅 Tanggal: {tanggal}\n⏰ Pukul: {jam} WIB\n📌 Status: *{status}*{keterangan_telat}\n\nTerima kasih atas kerja samanya.\n_Sistem Absensi {nama_sekolah}_'],

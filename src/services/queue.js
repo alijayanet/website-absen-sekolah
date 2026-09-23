@@ -1,5 +1,8 @@
 const db = require('../database/db');
-const whatsapp = require('./whatsapp');
+
+function getWhatsAppService() {
+  return require('./whatsapp');
+}
 
 class QueueService {
   constructor() {
@@ -40,7 +43,8 @@ class QueueService {
       }
 
       // Cek apakah WhatsApp terkoneksi
-      if (whatsapp.status !== 'connected') {
+      const whatsapp = getWhatsAppService();
+      if (!whatsapp || whatsapp.status !== 'connected') {
         // Jika belum terkoneksi, coba cek kembali dalam 5 detik
         clearTimeout(this.timer);
         this.timer = setTimeout(() => this.processNext(), 5000);

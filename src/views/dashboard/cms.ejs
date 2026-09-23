@@ -507,7 +507,21 @@
               <input type="time" name="jam_rekap_guru" value="<%= settings.jam_rekap_guru || '09:00' %>" class="w-full p-2 bg-white border border-slate-200 rounded-lg font-mono text-xs">
               <span class="text-[10px] text-slate-400 mt-1 block">Contoh: 09:00 (Pukul 9 pagi). Rekap juga tetap dapat dikirimkan secara manual kapan saja dari menu Presensi.</span>
             </div>
+
+            <div class="max-w-xs pt-1">
+              <label class="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                <i data-lucide="globe" class="w-3.5 h-3.5 text-blue-500"></i>
+                Zona Waktu Sistem Penjadwalan
+              </label>
+              <select name="scheduler_timezone" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium">
+                <option value="Asia/Jakarta" <%= (settings.scheduler_timezone || 'Asia/Jakarta') === 'Asia/Jakarta' ? 'selected' : '' %>>WIB — Waktu Indonesia Barat (UTC+7)</option>
+                <option value="Asia/Makassar" <%= settings.scheduler_timezone === 'Asia/Makassar' ? 'selected' : '' %>>WITA — Waktu Indonesia Tengah (UTC+8)</option>
+                <option value="Asia/Jayapura" <%= settings.scheduler_timezone === 'Asia/Jayapura' ? 'selected' : '' %>>WIT — Waktu Indonesia Timur (UTC+9)</option>
+              </select>
+              <span class="text-[10px] text-slate-400 mt-1 block">Zona waktu yang digunakan untuk pengecekan jam otomatis rekap, cutoff alpa, dan timestamp presensi. Default: WIB.</span>
+            </div>
           </div>
+
 
           <div>
             <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">

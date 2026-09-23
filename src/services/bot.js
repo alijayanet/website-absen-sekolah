@@ -1,7 +1,13 @@
 const db = require('../database/db');
-const { generateTeacherSummary } = require('./summary');
+const { 
+  generateTeacherSummary, 
+  generateMonthlyStudentSummary, 
+  generateMonthlyClassSummary 
+} = require('./summary');
 const financeService = require('./financeService');
 const savingsService = require('./savingsService');
+const leaveService = require('./leaveService');
+const { getTodayWIB, getTimeStringWIB } = require('../utils/timeHelper');
 
 
 class BotService {
@@ -17,9 +23,17 @@ class BotService {
    * Format nomor ke bentuk 08xxx dan 628xxx
    */
   getPhoneVariants(senderPhone) {
-    const clean = this.cleanPhone(senderPhone);
+    let clean = this.cleanPhone(senderPhone);
+    // Jika format LID (biasanya 14-16 digit) atau jika ada di waLidStore
+    if (clean.length > 13) {
+      try {
+        const { waLidStore } = require('./waLidStore');
+        const mapped = waLidStore.get(clean) || waLidStore.get(`${clean}@lid`);
+        if (mapped) clean = this.cleanPhone(mapped);
+      } catch (_) {}
+    }
     const with0 = '0' + (clean.startsWith('62') ? clean.slice(2) : clean);
-    const with62 = clean.startsWith('0') ? '62' + clean.slice(1) : clean;
+    const with62 = clean.startsWith('0') ? '62' + clean.slice(1) : (clean.startsWith('62') ? clean : '62' + clean);
     return { clean, with0, with62 };
   }
 
@@ -98,7 +112,7 @@ class BotService {
   buildStudentAttendanceMessage(student) {
     const settings = this.getSettings();
     const schoolName = settings.school_name || 'Sekolah';
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const today = getTodayWIB(); // YYYY-MM-DD dalam WIB
 
     // 1. Cek Presensi Hari Ini
     const todayAtt = db.prepare(`
@@ -122,10 +136,10 @@ class BotService {
       }
     }
 
-    // 2. Rekapitulasi Bulan Berjalan
-    const now = new Date();
-    const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    // 2. Rekapitulasi Bulan Berjalan (dalam WIB)
+    const todayParts = today.split('-'); // ['2026', '09', '22']
+    const currentMonthPrefix = `${todayParts[0]}-${todayParts[1]}`;
+    const monthName = new Date(today + 'T12:00:00Z').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
     const stats = db.prepare(`
       SELECT 
@@ -461,7 +475,7 @@ class BotService {
     // ==========================================
     // 1. HANDSHAKE VERIFIKASI: "YA" / "IYA"
     // ==========================================
-    if (/^YA$|^IYA$|^YA!$/i.test(rawText)) {
+    if (/^YA$|^IYA$|^YA!$/i.test(rawText.trim())) {
       if (parentStudents.length > 0) {
         const updateStmt = db.prepare("UPDATE students SET wa_status = 'confirmed', wa_confirmed_at = CURRENT_TIMESTAMP WHERE id = ?");
         for (const s of parentStudents) updateStmt.run(s.id);
@@ -469,7 +483,9 @@ class BotService {
         const studentList = parentStudents.map(s => `• *${s.name}* (Kelas ${s.class_name})`).join('\n');
         return `Assalamu’alaikum Wr. Wb.\n\nTerima kasih, nomor WhatsApp Anda telah *BERHASIL TERVERIFIKASI* di sistem absensi *${schoolName}* untuk ananda:\n${studentList}\n\nLaporan kehadiran harian ananda akan otomatis kami kirimkan ke nomor ini.\n\n_Ketik *MENU* untuk melihat perintah bantuan yang dapat digunakan._`;
       } else {
-        return `Assalamu’alaikum Wr. Wb.\nTerima kasih telah menghubungi bot resmi *${schoolName}*. Nomor Anda belum tercatat sebagai nomor wali murid di database kami.\n\n_Ketik *MENU* untuk melihat daftar informasi sekolah._`;
+        // Jangan balas pesan 'YA' jika pengirim bukan orang tua murid terdaftar
+        console.log(`[WhatsApp Bot] Pesan 'YA' diabaikan karena nomor ${senderPhone || senderJid} bukan orang tua terdaftar.`);
+        return null;
       }
     }
 
@@ -840,21 +856,192 @@ class BotService {
 
 
     // ==========================================
-    // 3. PERINTAH KHUSUS GURU: REKAP PRESENSI KELAS
+    // 3. PERINTAH: REKAP BULANAN (GURU & ORANG TUA)
+    // ==========================================
+    const isMonthlySummary = firstWord === 'BULANAN' || 
+      (firstWord === 'REKAP' && /\bBULAN\b|\bBULANAN\b/i.test(rawText)) ||
+      (firstWord === 'REKAP' && parentStudents && parentStudents.length > 0 && !teacher && !admin);
+
+    if (isMonthlySummary) {
+      // -------------------------------------------------------------
+      // KASUS A: PENGIRIM ADALAH ORANG TUA MURID
+      // -------------------------------------------------------------
+      if (parentStudents && parentStudents.length > 0) {
+        // Ekstrak token setelah perintah
+        let remainingTokens = tokens.slice(1);
+        if (remainingTokens.length > 0 && remainingTokens[0].toUpperCase() === 'BULANAN') {
+          remainingTokens = remainingTokens.slice(1);
+        } else if (remainingTokens.length > 0 && remainingTokens[0].toUpperCase() === 'BULAN') {
+          remainingTokens = remainingTokens.slice(1);
+        }
+
+        let targetStudent = null;
+
+        if (parentStudents.length === 1) {
+          targetStudent = parentStudents[0];
+        } else {
+          // Jika memiliki lebih dari 1 anak, cek apakah menyebut nomor urut atau nama/NIS
+          if (remainingTokens.length > 0) {
+            const firstArg = remainingTokens[0];
+            const childIdx = parseInt(firstArg, 10);
+            if (!isNaN(childIdx) && childIdx >= 1 && childIdx <= parentStudents.length) {
+              targetStudent = parentStudents[childIdx - 1];
+              remainingTokens = remainingTokens.slice(1);
+            } else {
+              // Cek kecocokan nama atau NIS
+              for (const s of parentStudents) {
+                const firstName = s.name.split(' ')[0].toLowerCase();
+                if (firstArg.toLowerCase() === firstName || s.nis === firstArg || s.name.toLowerCase().startsWith(firstArg.toLowerCase())) {
+                  targetStudent = s;
+                  remainingTokens = remainingTokens.slice(1);
+                  break;
+                }
+              }
+            }
+          }
+
+          // Jika belum ditentukan, tampilkan pilihan anak
+          if (!targetStudent) {
+            let chooseMsg = `Ditemukan *${parentStudents.length} siswa* yang terdaftar dengan nomor WhatsApp ini:\n\n`;
+            parentStudents.forEach((s, idx) => {
+              chooseMsg += `${idx + 1}. *${s.name}* (Kelas ${s.class_name || '-'} • NIS ${s.nis})\n`;
+            });
+            chooseMsg += `\nSilakan balas dengan mengetik:\n`;
+            parentStudents.forEach((s, idx) => {
+              chooseMsg += `👉 Ketik *BULANAN ${idx + 1}* untuk ${s.name.split(' ')[0]}\n`;
+            });
+            chooseMsg += `\n_Atau sebutkan bulan, contoh: *BULANAN 1 Agustus*_`;
+            return chooseMsg;
+          }
+        }
+
+        const monthParam = remainingTokens.join(' ').trim();
+        try {
+          const summaryObj = generateMonthlyStudentSummary(targetStudent.id, monthParam);
+          return summaryObj.message;
+        } catch (err) {
+          return `Gagal memuat rekap kehadiran: ${err.message}`;
+        }
+      }
+
+      // -------------------------------------------------------------
+      // KASUS B: PENGIRIM ADALAH GURU / WALI KELAS
+      // -------------------------------------------------------------
+      if (teacher) {
+        if (!teacher.class_id) {
+          return `Halo ${teacher.name}, akun Guru Anda belum ditugaskan sebagai Wali Kelas dari rombel tertentu di sistem.`;
+        }
+
+        let remainingTokens = tokens.slice(1);
+        if (remainingTokens.length > 0 && remainingTokens[0].toUpperCase() === 'BULANAN') {
+          remainingTokens = remainingTokens.slice(1);
+        } else if (remainingTokens.length > 0 && remainingTokens[0].toUpperCase() === 'BULAN') {
+          remainingTokens = remainingTokens.slice(1);
+        }
+
+        // Cek apakah ada argumen nama siswa atau NIS siswa
+        let targetStudent = null;
+        let monthTokens = [];
+
+        if (remainingTokens.length > 0) {
+          const firstArg = remainingTokens[0];
+          // Cek apakah firstArg adalah nama atau NIS siswa di kelasnya
+          const studentByNis = db.prepare(`
+            SELECT * FROM students WHERE (nis = ? OR nisn = ?) AND class_id = ? AND is_active = 1
+          `).get(firstArg, firstArg, teacher.class_id);
+
+          if (studentByNis) {
+            targetStudent = studentByNis;
+            monthTokens = remainingTokens.slice(1);
+          } else {
+            // Cek pencarian nama di kelas
+            const foundInClass = db.prepare(`
+              SELECT * FROM students 
+              WHERE class_id = ? AND is_active = 1 AND name LIKE ?
+              ORDER BY name ASC
+            `).all(teacher.class_id, `%${firstArg}%`);
+
+            if (foundInClass.length === 1) {
+              targetStudent = foundInClass[0];
+              monthTokens = remainingTokens.slice(1);
+            } else if (foundInClass.length > 1) {
+              let listMsg = `Ditemukan *${foundInClass.length} siswa* dengan nama "${firstArg}" di kelas Anda:\n\n`;
+              foundInClass.forEach((s, idx) => {
+                listMsg += `${idx + 1}. *${s.name}* (NIS: ${s.nis})\n`;
+              });
+              listMsg += `\nSilakan ketik dengan menyertakan NIS siswa:\nContoh: *REKAP BULANAN ${foundInClass[0].nis}*`;
+              return listMsg;
+            } else {
+              // Bukan nama siswa, mungkin nama bulan (misal: "Agustus" atau "2026-08")
+              monthTokens = remainingTokens;
+            }
+          }
+        }
+
+        const monthParam = monthTokens.join(' ').trim();
+
+        try {
+          if (targetStudent) {
+            // Rekap per siswa untuk guru
+            const studentSummary = generateMonthlyStudentSummary(targetStudent.id, monthParam);
+            return studentSummary.message;
+          } else {
+            // Rekap seluruh rombel kelas untuk guru
+            const classSummary = generateMonthlyClassSummary(teacher.class_id, monthParam);
+            return classSummary.message;
+          }
+        } catch (err) {
+          return `Gagal memuat rekap bulanan: ${err.message}`;
+        }
+      }
+
+      // -------------------------------------------------------------
+      // KASUS C: PENGIRIM ADALAH ADMINISTRATOR
+      // -------------------------------------------------------------
+      if (admin) {
+        return `Halo Admin, silakan gunakan menu Dashboard Web untuk rekapitulasi seluruh kelas sekolah, atau ketik *REKAP BULANAN <NIS>* untuk memeriksa siswa tertentu.`;
+      }
+
+      return `Nomor WhatsApp Anda belum terdaftar sebagai wali murid atau dewan guru di sistem absensi *${schoolName}*.`;
+    }
+
+    // ==========================================
+    // 3.1 PERINTAH KHUSUS GURU: REKAP PRESENSI HARIAN KELAS
     // ==========================================
     if (firstWord === 'REKAP' || firstWord === 'URUTAN') {
       if (!teacher) {
-        return `⚠️ Perintah *REKAP* khusus untuk Guru / Wali Kelas *${schoolName}*.\n\nUntuk wali murid, silakan ketik *CEK* untuk melihat kehadiran ananda.`;
+        return `⚠️ Perintah *REKAP* presensi harian khusus untuk Guru / Wali Kelas *${schoolName}*.\n\nUntuk wali murid, silakan ketik *CEK* atau *BULANAN* untuk melihat kehadiran ananda.`;
       }
 
       if (!teacher.class_id) {
         return `Halo ${teacher.name}, akun Guru Anda belum ditugaskan sebagai Wali Kelas dari rombel tertentu di sistem.`;
       }
 
+      // Jika guru mengetik "REKAP MENU" atau "REKAP PANDUAN", berikan panduan menu rekap lengkap
+      if (tokens.length > 1 && /^(MENU|BANTUAN|PANDUAN|HELP)$/i.test(tokens[1])) {
+        let menuResp = `📋 *PANDUAN MENU REKAP WALI KELAS*\n`;
+        menuResp += `🏫 *${schoolName}*\n`;
+        menuResp += `🏷️ *Kelas:* ${teacher.class_name}\n`;
+        menuResp += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+        menuResp += `Berikut perintah rekap kehadiran yang dapat Anda gunakan:\n\n`;
+        menuResp += `👉 *REKAP* : Rekap urutan presensi kelas Anda hari ini\n`;
+        menuResp += `👉 *REKAP BULANAN* : Rekapitulasi kehadiran satu kelas selama 1 bulan berjalan\n`;
+        menuResp += `👉 *REKAP BULANAN <BULAN>* : Rekap kehadiran bulan tertentu (Contoh: *REKAP BULANAN Agustus*)\n`;
+        menuResp += `👉 *REKAP BULANAN <NIS/NAMA>* : Rekap 1 bulan untuk siswa tertentu (Contoh: *REKAP BULANAN Ahmad*)\n`;
+        menuResp += `👉 *BELUM* : Cek siswa yang belum hadir / alpa hari ini\n`;
+        menuResp += `👉 *PENDING* : Cek permohonan izin/sakit siswa yang butuh respon\n`;
+        menuResp += `👉 *TABUNGAN* : Cek rekap buku tabungan murid kelas Anda\n\n`;
+        menuResp += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        menuResp += `_Ketik *MENU* untuk melihat seluruh fitur layanan bot sekolah._`;
+        return menuResp;
+      }
+
       try {
-        const today = new Date().toLocaleDateString('en-CA');
+        const today = getTodayWIB();
         const summary = generateTeacherSummary(teacher.class_id, today);
-        return summary.message;
+        let resp = summary.message;
+        resp += `\n\n💡 _Tips: Ketik *REKAP BULANAN* untuk melihat rekap kehadiran seluruh murid kelas Anda selama 1 bulan._`;
+        return resp;
       } catch (err) {
         return `Gagal membuat rekap kelas: ${err.message}`;
       }
@@ -863,7 +1050,9 @@ class BotService {
     // ==========================================
     // 4. PERINTAH KHUSUS GURU: BELUM HADIR / ALPA
     // ==========================================
-    if (firstWord === 'BELUM' || firstWord === 'ALPA') {
+    const isAbsentQuery = /^(BELUM|ALPA|BELUM\s*HADIR|SISWA\s*BELUM)$/i.test(rawText.trim()) || 
+                          ((firstWord === 'BELUM' || firstWord === 'ALPA') && tokens.length === 1);
+    if (isAbsentQuery) {
       if (!teacher) {
         return `⚠️ Perintah *BELUM* khusus untuk Guru / Wali Kelas *${schoolName}*.`;
       }
@@ -872,7 +1061,7 @@ class BotService {
         return `Halo ${teacher.name}, akun Guru Anda belum ditugaskan sebagai Wali Kelas dari rombel tertentu di sistem.`;
       }
 
-      const today = new Date().toLocaleDateString('en-CA');
+      const today = getTodayWIB();
       const absentStudents = db.prepare(`
         SELECT s.*, c.name as class_name
         FROM students s
@@ -882,8 +1071,7 @@ class BotService {
         ORDER BY s.name ASC
       `).all(teacher.class_id, today);
 
-      const now = new Date();
-      const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const timeNow = getTimeStringWIB(); // HH:MM dalam WIB
 
       let resp = `📋 *DAFTAR SISWA BELUM HADIR HARI INI*\n`;
       resp += `🏫 *${schoolName}*\n`;
@@ -1204,7 +1392,9 @@ class BotService {
     // ==========================================
     // 5. PERINTAH: JADWAL & OPERASIONAL SEKOLAH
     // ==========================================
-    if (firstWord === 'JADWAL' || firstWord === 'JAM' || firstWord === 'TATA') {
+    const isScheduleQuery = /^(JADWAL|JAM\s*MASUK|TATA\s*TERTIB|JADWAL\s*SEKOLAH)$/i.test(rawText.trim()) || 
+                            firstWord === 'JADWAL';
+    if (isScheduleQuery) {
       const jamMasuk = settings.jam_masuk || '07:00';
       const toleransi = settings.toleransi_telat || '07:15';
       const hariAktif = settings.hari_aktif || 'Senin – Jumat';
@@ -1231,7 +1421,9 @@ class BotService {
     // ==========================================
     // 6. PERINTAH: KONTAK WALI KELAS
     // ==========================================
-    if (firstWord === 'WALI' || firstWord === 'WALIKELAS' || firstWord === 'GURU') {
+    const isWaliQuery = /^(WALI|WALIKELAS|WALI\s*KELAS|KONTAK\s*WALI)$/i.test(rawText.trim()) || 
+                        firstWord === 'WALI' || firstWord === 'WALIKELAS';
+    if (isWaliQuery) {
       if (parentStudents.length > 0) {
         let resp = `👨‍🏫 *KONTAK WALI KELAS ANANDA*\n`;
         resp += `🏫 *${schoolName}*\n`;
@@ -1256,27 +1448,100 @@ class BotService {
     }
 
     // ==========================================
-    // 7. PERINTAH: PETUNJUK IZIN / SAKIT MANDIRI
+    // 7. PERINTAH KHUSUS GURU/ADMIN: SETUJU / TOLAK IZIN SISWA & CEK PENDING
+    // ==========================================
+    if (firstWord === 'SETUJU' || firstWord === 'APPROVE') {
+      const reviewer = teacher || admin;
+      if (!reviewer) {
+        return `⚠️ *Akses Terbatas:*\nPerintah persetujuan izin hanya dapat dilakukan oleh Wali Kelas / Dewan Guru dan Administrator sekolah.`;
+      }
+      const leaveId = tokens[1];
+      if (!leaveId) {
+        return `Silakan tentukan nomor ID permohonan yang ingin disetujui.\nContoh: *SETUJU 12*\n\n_Ketik *PENDING* untuk melihat daftar permohonan yang menunggu respon._`;
+      }
+      return leaveService.processTeacherDecision(reviewer, 'APPROVE', leaveId);
+    }
+
+    if (firstWord === 'TOLAK' || firstWord === 'REJECT') {
+      const reviewer = teacher || admin;
+      if (!reviewer) {
+        return `⚠️ *Akses Terbatas:*\nPerintah penolakan izin hanya dapat dilakukan oleh Wali Kelas / Dewan Guru dan Administrator sekolah.`;
+      }
+      const leaveId = tokens[1];
+      if (!leaveId) {
+        return `Silakan tentukan nomor ID permohonan yang ingin ditolak.\nContoh: *TOLAK 12 surat dokter belum ada*\n\n_Ketik *PENDING* untuk melihat daftar permohonan yang menunggu respon._`;
+      }
+      const rejectionNotes = tokens.slice(2).join(' ');
+      return leaveService.processTeacherDecision(reviewer, 'REJECT', leaveId, rejectionNotes);
+    }
+
+    if (firstWord === 'PENDING') {
+      const reviewer = teacher || admin;
+      if (!reviewer) {
+        return `⚠️ *Akses Terbatas:*\nPerintah *PENDING* khusus untuk Wali Kelas / Dewan Guru dan Administrator sekolah.`;
+      }
+      return leaveService.getPendingLeavesMessage(reviewer);
+    }
+
+    // ==========================================
+    // 8. PERINTAH ORANG TUA: LAPORAN IZIN / SAKIT SISWA
     // ==========================================
     if (firstWord === 'IZIN' || firstWord === 'SAKIT') {
-      let resp = `📝 *PANDUAN PENGAJUAN IZIN & SAKIT SISWA*\n`;
-      resp += `🏫 *${schoolName}*\n`;
-      resp += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-      resp += `Bapak/Ibu Wali Murid kini dapat mengajukan izin atau surat keterangan sakit secara *mandiri & digital* langsung melalui website sekolah:\n\n`;
-      resp += `1. Buka website resmi sekolah di bagian *Cek Kehadiran*: http://localhost:3000/#cek-kehadiran\n`;
-      resp += `2. Masukkan *NIS* atau *NISN* ananda.\n`;
-      resp += `3. Klik tombol *[+ Ajukan Surat Izin / Sakit]*.\n`;
-      resp += `4. Isi alasan, rentang tanggal, foto surat dokter, serta verifikasi 4 digit terakhir nomor WhatsApp Anda.\n`;
-      resp += `5. Permohonan akan diverifikasi oleh Wali Kelas dan notifikasi persetujuan akan otomatis dikirimkan ke WhatsApp Anda.\n\n`;
-      resp += `━━━━━━━━━━━━━━━━━━━━━\n`;
-      resp += `_Ketik *MENU* untuk layanan lainnya._`;
-      return resp;
+      // Periksa apakah guru/admin mengetik "IZIN PENDING"
+      if (tokens.length > 1 && tokens[1].toUpperCase() === 'PENDING') {
+        const reviewer = teacher || admin;
+        if (reviewer) {
+          return leaveService.getPendingLeavesMessage(reviewer);
+        }
+      }
+
+      // Parsing laporan dari orang tua
+      const parsed = leaveService.parseLeaveMessage(rawText, parentStudents);
+
+      if (parsed.error === 'NOMOR_TIDAK_TERDAFTAR') {
+        return `Nomor WhatsApp Anda (*${senderPhone}*) belum terdaftar sebagai wali murid di sistem absensi *${schoolName}*.\n\nUntuk pelaporan izin/sakit, silakan hubungi pihak sekolah atau gunakan menu izin mandiri di website resmi sekolah: http://localhost:3000/#cek-kehadiran`;
+      }
+
+      if (parsed.error === 'HARI_LIBUR') {
+        return parsed.message;
+      }
+
+      if (parsed.needChildSelection) {
+        let chooseMsg = `Ditemukan *${parentStudents.length} siswa* yang terdaftar dengan nomor WhatsApp ini:\n\n`;
+        parentStudents.forEach((s, idx) => {
+          chooseMsg += `${idx + 1}. *${s.name}* (Kelas ${s.class_name || '-'} • NIS ${s.nis})\n`;
+        });
+        chooseMsg += `\nSilakan balas dengan format:\n`;
+        parentStudents.forEach((s, idx) => {
+          chooseMsg += `👉 Ketik *${parsed.type} ${idx + 1} [alasan]* untuk ${s.name.split(' ')[0]}\n`;
+        });
+        chooseMsg += `\n_Contoh: *${parsed.type} 1 ${parsed.type === 'SAKIT' ? 'demam dan batuk' : 'ada acara keluarga'}*_`;
+        return chooseMsg;
+      }
+
+      if (parsed.success) {
+        const submitRes = leaveService.submitLeaveRequest({
+          student: parsed.student,
+          type: parsed.type,
+          startDate: parsed.startDate,
+          endDate: parsed.endDate,
+          reason: parsed.reason,
+          parentPhone: senderPhone,
+          parentName: parsed.student.parent_name
+        });
+
+        return submitRes.message;
+      }
+
+      return `Format laporan izin/sakit tidak sesuai. Contoh: *SAKIT demam tinggi* atau *IZIN BESOK ada acara keluarga*.`;
     }
 
     // ==========================================
     // 8. PERINTAH: PROFIL & INFORMASI SEKOLAH
     // ==========================================
-    if (firstWord === 'INFO' || firstWord === 'PROFIL' || firstWord === 'KONTAK') {
+    const isInfoQuery = /^(INFO|PROFIL|KONTAK)(\s+SEKOLAH|\s+RESMI)?$/i.test(rawText.trim()) ||
+                        ((firstWord === 'INFO' || firstWord === 'PROFIL' || firstWord === 'KONTAK') && tokens.length <= 2);
+    if (isInfoQuery) {
       let resp = `🏫 *PROFIL RESMI SEKOLAH*\n`;
       resp += `*${schoolName}*\n`;
       if (settings.school_tagline) resp += `_${settings.school_tagline}_\n`;
@@ -1292,22 +1557,13 @@ class BotService {
     }
 
     // ==========================================
-    // 9. PERINTAH: MENU / BANTUAN (HANYA PERINTAH VALID)
+    // 9. PERINTAH: MENU / BANTUAN RESMI
     // ==========================================
-    const isMenuCommand = /^([!/]?MENU|[!/]?BANTUAN|[!/]?HELP|[!/]?PANDUAN)$/i.test(firstWord);
+    const isMenuCommand = /^([!/#]?(MENU|BANTUAN|HELP|PANDUAN))$/i.test(firstWord);
 
-    // Hanya perintah resmi yang dibalas oleh bot.
-    // Jika bukan perintah MENU/BANTUAN dan bukan perintah lainnya di atas, abaikan pesan masuk (jangan dibalas).
+    // Selain perintah resmi bot di atas, pesan masuk TIDAK BOLEH dibalas oleh bot (100% silent)
     if (!isMenuCommand) {
       console.log(`[WhatsApp Bot] Pesan diabaikan (bukan perintah bot resmi): "${rawText}" dari ${senderPhone || senderJid}`);
-      return null;
-    }
-
-    // Selain nomor yang terdaftar di database (Guru, Wali Murid, Admin),
-    // jangan dibalas dengan pesan selamat datang / menu bantuan.
-    const isRegistered = Boolean(teacher || admin || (parentStudents && parentStudents.length > 0));
-    if (!isRegistered) {
-      console.log(`[WhatsApp Bot] Perintah MENU diabaikan (nomor ${senderPhone || senderJid} tidak terdaftar di database).`);
       return null;
     }
 
@@ -1326,30 +1582,38 @@ class BotService {
     menuMsg += `Berikut daftar perintah yang dapat Anda kirimkan:\n`;
     menuMsg += `━━━━━━━━━━━━━━━━━━━━━\n`;
     menuMsg += `📌 *LAYANAN WALI MURID:*\n`;
-    menuMsg += `• *CEK* : Cek kehadiran & rekap bulanan ananda\n`;
-    menuMsg += `• *CEK <NIS>* : Cek siswa tertentu (Contoh: *CEK 1001*)\n`;
+    menuMsg += `• *CEK* : Cek kehadiran hari ini & rekap berjalan ananda\n`;
+    menuMsg += `• *BULANAN* : Rekapitulasi kehadiran bulanan ananda (Contoh: *BULANAN* atau *BULANAN Agustus*)\n`;
+    menuMsg += `• *SAKIT <alasan>* : Lapor ananda sakit (Contoh: *SAKIT demam flu*)\n`;
+    menuMsg += `• *IZIN <alasan>* : Lapor izin siswa (Contoh: *IZIN acara keluarga*)\n`;
     menuMsg += `• *SPP* : Cek tagihan SPP & status pembayaran ananda\n`;
     menuMsg += `• *BAYAR <ID>* : Dapatkan barcode QRIS bayar otomatis\n`;
     menuMsg += `• *TABUNGAN* : Cek saldo & mutasi buku tabungan ananda\n`;
     menuMsg += `• *JADWAL* : Jam masuk & tata tertib gerbang\n`;
     menuMsg += `• *WALI* : Kontak Wali Kelas ananda\n`;
-    menuMsg += `• *IZIN* : Panduan pengajuan izin sakit online\n`;
     menuMsg += `• *INFO* : Kontak & profil resmi sekolah\n`;
 
     if (teacher) {
       menuMsg += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
       menuMsg += `📌 *MENU KHUSUS WALI KELAS:*\n`;
+      menuMsg += `• *REKAP* : Rekap urutan presensi kelas Anda hari ini\n`;
+      menuMsg += `• *REKAP BULANAN* : Rekapitulasi kehadiran satu kelas selama 1 bulan\n`;
+      menuMsg += `• *REKAP BULANAN <NIS/NAMA>* : Rincian bulanan siswa tertentu (Contoh: *REKAP BULANAN Ahmad*)\n`;
+      menuMsg += `• *BELUM* : Daftar siswa yang belum tap presensi hari ini\n`;
+      menuMsg += `• *PENDING* : Cek permohonan izin/sakit yang menunggu respon\n`;
+      menuMsg += `• *SETUJU <ID>* : Setujui permohonan izin siswa (Contoh: *SETUJU 12*)\n`;
+      menuMsg += `• *TOLAK <ID> <alasan>* : Tolak izin siswa (Contoh: *TOLAK 12 surat belum ada*)\n`;
       menuMsg += `• *TABUNGAN* / *TOTAL TABUNGAN* : Cek rekap & total saldo seluruh murid kelas Anda\n`;
       menuMsg += `• *TABUNGAN <NAMA/NIS>* : Cek saldo & mutasi murid tertentu (Contoh: *TABUNGAN Ahmad*)\n`;
       menuMsg += `• *SETOR <NAMA/NIS> <JUMLAH>* : Tambah tabungan siswa (Contoh: *SETOR Ahmad 20rb*)\n`;
       menuMsg += `• *TARIK <NAMA/NIS> <JUMLAH>* : Catat penarikan tabungan (Contoh: *TARIK Ahmad 10rb*)\n`;
-      menuMsg += `• *REKAP* : Rekap urutan presensi kelas Anda hari ini\n`;
-      menuMsg += `• *BELUM* : Daftar siswa yang belum tap presensi hari ini\n`;
     }
 
     if (admin) {
       menuMsg += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
       menuMsg += `📌 *MENU KHUSUS ADMINISTRATOR:*\n`;
+      menuMsg += `• *PENDING* : Cek seluruh permohonan izin/sakit yang menunggu respon\n`;
+      menuMsg += `• *SETUJU <ID>* / *TOLAK <ID>* : Setujui atau tolak izin siswa\n`;
       menuMsg += `• *TABUNGAN* / *TOTAL TABUNGAN* : Cek rekapitulasi & grand total tabungan sekolah\n`;
       menuMsg += `• *INFO* : Kontak & profil resmi sekolah\n`;
     }
@@ -1366,41 +1630,119 @@ class BotService {
   async handleMessage(whatsappService, m) {
     try {
       if (!m.messages || m.messages.length === 0) return;
-      const msg = m.messages[0];
-      if (msg.key.fromMe) return; // Abaikan pesan yang dikirim bot sendiri
 
-      const remoteJid = msg.key.remoteJid;
-      if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.includes('status@broadcast')) {
-        return; // Abaikan pesan grup dan status WhatsApp
-      }
+      for (const msg of m.messages) {
+        if (!msg.message) continue;
 
-      // Ekstrak isi teks
-      const text = (
-        msg.message?.conversation ||
-        msg.message?.extendedTextMessage?.text ||
-        ''
-      ).trim();
+        // Filter bot self-chat kecuali jika remoteJid berbeda
+        const sockUser = whatsappService.sock?.user;
+        const selfPn = sockUser?.id ? sockUser.id.split(':')[0].split('@')[0] : null;
+        const selfLid = sockUser?.lid ? sockUser.lid.split('@')[0] : null;
+        const remoteUser = msg.key.remoteJid ? msg.key.remoteJid.split('@')[0] : null;
+        const isSelf = msg.key.fromMe && (remoteUser === selfPn || (selfLid && remoteUser === selfLid));
+        if (msg.key.fromMe && !isSelf) continue;
 
-      if (!text) return;
+        const remoteJid = msg.key.remoteJid;
+        if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.includes('status@broadcast')) {
+          continue; // Abaikan pesan grup dan status WhatsApp
+        }
 
-      // Resolusi nomor telepon (mendukung nomor HP standar @s.whatsapp.net dan LID @lid)
-      let resolvedPhone = null;
-      if (whatsappService && typeof whatsappService.resolvePhoneNumber === 'function') {
-        resolvedPhone = await whatsappService.resolvePhoneNumber(remoteJid, msg);
-      }
+        // Ekstrak isi teks (mendukung format standar, pesan sementara/ephemeral, view once, caption media, dan tombol interaktif)
+        let rawMsg = msg.message;
+        if (rawMsg?.ephemeralMessage?.message) rawMsg = rawMsg.ephemeralMessage.message;
+        if (rawMsg?.viewOnceMessage?.message) rawMsg = rawMsg.viewOnceMessage.message;
+        if (rawMsg?.viewOnceMessageV2?.message) rawMsg = rawMsg.viewOnceMessageV2.message;
+        if (rawMsg?.documentWithCaptionMessage?.message) rawMsg = rawMsg.documentWithCaptionMessage.message;
 
-      console.log(`[WhatsApp Bot] Pesan diterima dari ${remoteJid} (Phone: ${resolvedPhone || '-'}): "${text}"`);
+        const text = (
+          rawMsg?.conversation ||
+          rawMsg?.extendedTextMessage?.text ||
+          rawMsg?.imageMessage?.caption ||
+          rawMsg?.videoMessage?.caption ||
+          rawMsg?.documentMessage?.caption ||
+          rawMsg?.buttonsResponseMessage?.selectedButtonId ||
+          rawMsg?.templateButtonReplyMessage?.selectedId ||
+          rawMsg?.listResponseMessage?.singleSelectReply?.selectedRowId ||
+          ''
+        ).trim();
 
-      // Proses pesan melalui bot router
-      const reply = await this.processIncomingMessage(remoteJid, text, resolvedPhone);
+        if (!text) continue;
 
-      if (reply) {
-        if (typeof reply === 'object' && reply.type === 'image') {
-          await whatsappService.sendImageMessage(remoteJid, reply.buffer, reply.caption);
-          console.log(`[WhatsApp Bot] Barcode QRIS terkirim ke ${remoteJid}`);
-        } else {
-          await whatsappService.sendTextMessage(remoteJid, reply);
-          console.log(`[WhatsApp Bot] Balasan otomatis terkirim ke ${remoteJid}`);
+        // Resolusi nomor telepon menggunakan metode dari whatsappService
+        let resolvedPhone = null;
+        if (whatsappService && typeof whatsappService.getPhoneFromKey === 'function') {
+          resolvedPhone = whatsappService.getPhoneFromKey(msg.key);
+        } else if (whatsappService && typeof whatsappService.resolvePhoneNumber === 'function') {
+          resolvedPhone = await whatsappService.resolvePhoneNumber(remoteJid, msg);
+        }
+
+        console.log(`[WhatsApp Bot] Pesan diterima dari ${remoteJid} (Phone: ${resolvedPhone || '-'}): "${text}"`);
+
+        // Proses pesan melalui bot router
+        const reply = await this.processIncomingMessage(remoteJid, text, resolvedPhone);
+
+        if (reply) {
+          // Pengiriman balasan:
+          // Jika pesan masuk dari @lid, kirim ke remoteJid (@lid) terlebih dahulu agar langsung muncul di jendela obrolan pengguna
+          // Fallback ke ${resolvedPhone}@s.whatsapp.net jika diperlukan
+          const primaryJid = remoteJid;
+          const fallbackJid = (resolvedPhone && resolvedPhone.length >= 8) ? `${resolvedPhone}@s.whatsapp.net` : null;
+
+          let sent = false;
+          // Coba kirim langsung, dengan retry singkat jika soket sedang reconnecting
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              if (whatsappService.status === 'connected' && whatsappService.sock) {
+                try {
+                  if (typeof reply === 'object' && reply.type === 'image') {
+                    await whatsappService.sendImageMessage(primaryJid, reply.buffer, reply.caption);
+                    console.log(`[WhatsApp Bot] Barcode QRIS terkirim ke ${primaryJid} (dari ${remoteJid})`);
+                  } else {
+                    await whatsappService.sendTextMessage(primaryJid, reply);
+                    console.log(`[WhatsApp Bot] Balasan otomatis terkirim ke ${primaryJid} (dari ${remoteJid})`);
+                  }
+                  sent = true;
+                  break;
+                } catch (primErr) {
+                  console.warn(`[WhatsApp Bot] Percobaan ${attempt} gagal kirim ke primary JID ${primaryJid}: ${primErr.message}`);
+                  if (fallbackJid && fallbackJid !== primaryJid) {
+                    if (typeof reply === 'object' && reply.type === 'image') {
+                      await whatsappService.sendImageMessage(fallbackJid, reply.buffer, reply.caption);
+                      console.log(`[WhatsApp Bot] Barcode QRIS terkirim via fallback ${fallbackJid}`);
+                    } else {
+                      await whatsappService.sendTextMessage(fallbackJid, reply);
+                      console.log(`[WhatsApp Bot] Balasan otomatis terkirim via fallback ${fallbackJid}`);
+                    }
+                    sent = true;
+                    break;
+                  }
+                  throw primErr;
+                }
+              }
+            } catch (sendErr) {
+              console.warn(`[WhatsApp Bot] Percobaan ${attempt} gagal kirim balasan: ${sendErr.message}`);
+            }
+            if (attempt < 3) {
+              await new Promise(r => setTimeout(r, 1000));
+            }
+          }
+
+          // Fallback: jika tetap belum terkirim setelah 3 kali, masukkan ke antrean wa_queue
+          if (!sent && typeof reply === 'string') {
+            try {
+              const queueService = require('./queue');
+              const cleanPhone = (resolvedPhone || remoteJid.split('@')[0]).replace(/\D/g, '');
+              queueService.enqueue({
+                studentId: null,
+                phone: cleanPhone,
+                message: reply,
+                type: 'BOT_REPLY'
+              });
+              console.log(`[WhatsApp Bot] Balasan dimasukkan ke antrean wa_queue untuk ${cleanPhone} (akan otomatis terkirim saat tersambung)`);
+            } catch (qErr) {
+              console.error('[WhatsApp Bot] Gagal memasukkan balasan ke antrean wa_queue:', qErr);
+            }
+          }
         }
       }
     } catch (err) {

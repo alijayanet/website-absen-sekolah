@@ -554,7 +554,7 @@
 
     /* Bilah Pita Sisi Kiri (Vertical Ribbon) */
     .sideribbon-left {
-      width: 10.8mm;
+      width: 11.2mm;
       background: var(--sideribbon-bg, #091a3c);
       height: 100%;
       display: flex;
@@ -587,14 +587,17 @@
     .sideribbon-text {
       writing-mode: vertical-rl;
       transform: rotate(180deg);
-      font-size: 6.8pt;
+      font-size: 10pt;
       font-weight: 900;
-      letter-spacing: 1.8px;
+      letter-spacing: 2.2px;
       color: #ffffff;
       text-transform: uppercase;
       white-space: nowrap;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
       padding: 4px 0;
+      max-height: 80mm;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Area Konten Kanan */
@@ -825,16 +828,35 @@
     }
 
     /* ====================================================
+       KHUSUS MODEL 4 MODE PORTRAIT (53.98mm x 85.6mm)
+       Pita Vertikal Elegan & Font Sekolah Lebih Besar & Jelas
+       ==================================================== */
+    .layout-portrait .sideribbon-left {
+      width: 11.2mm;
+    }
+    .layout-portrait .sideribbon-text {
+      font-size: 10pt;
+      letter-spacing: 2.2px;
+      font-weight: 900;
+      max-height: 80mm;
+      padding: 6px 0;
+    }
+
+    /* ====================================================
        KHUSUS MODEL 4 MODE LANDSCAPE (85.6mm x 53.98mm)
        Mencegah QR Code Terpotong dengan Tata Letak 3-Kolom
        ==================================================== */
     .layout-landscape .sideribbon-left {
-      width: 9.5mm;
+      width: 10mm;
     }
     .layout-landscape .sideribbon-text {
-      font-size: 5.2pt;
-      letter-spacing: 1.1px;
-      padding: 2px 0;
+      font-size: 7.6pt;
+      letter-spacing: 1.4px;
+      font-weight: 900;
+      padding: 3px 0;
+      max-height: 48mm;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .layout-landscape .sideribbon-right-header {
       padding: 1.5mm 3.5mm 0 3.5mm;

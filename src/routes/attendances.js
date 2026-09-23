@@ -5,11 +5,12 @@ const db = require('../database/db');
 const { isAuthenticated } = require('../middlewares/auth');
 const queue = require('../services/queue');
 const { generateTeacherSummary } = require('../services/summary');
+const { getTodayWIB, getTimeSecondWIB, getTimeStringWIB, formatDateIndonesia } = require('../utils/timeHelper');
 
 // 1. Tampilkan Daftar Kehadiran & Rekap
 router.get('/dashboard/attendances', isAuthenticated, (req, res) => {
   const user = req.session.user;
-  const today = new Date().toLocaleDateString('en-CA');
+  const today = getTodayWIB();
   const date = req.query.date || today;
   const classId = (user.role === 'guru' && user.class_id) ? user.class_id : (req.query.class_id || '');
   const status = req.query.status || '';
@@ -106,8 +107,7 @@ router.post('/dashboard/attendances/manual', isAuthenticated, (req, res) => {
       return res.redirect('/dashboard/attendances?error=Anda hanya berhak menginput absensi siswa di kelas binaan Anda');
     }
 
-    const now = new Date();
-    const timeIn = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const timeIn = getTimeSecondWIB(); // HH:MM:SS dalam WIB
     const creator = req.session.user.name || 'GURU/ADMIN';
 
     // Insert or Replace jika sudah ada
@@ -162,7 +162,7 @@ router.post('/dashboard/attendances/broadcast-alpa', isAuthenticated, (req, res)
   try {
     const user = req.session.user;
     const { date } = req.body;
-    const targetDate = date || new Date().toLocaleDateString('en-CA');
+    const targetDate = date || getTodayWIB();
     let targetClassId = (user.role === 'guru' && user.class_id) ? user.class_id : req.body.class_id;
 
     if (user.role === 'guru' && !user.class_id) {
@@ -197,9 +197,8 @@ router.post('/dashboard/attendances/broadcast-alpa', isAuthenticated, (req, res)
     const templateSetting = db.prepare("SELECT value FROM settings WHERE key = 'wa_template_alpa'").get()?.value;
     const schoolNameSetting = db.prepare("SELECT value FROM settings WHERE key = 'school_name'").get()?.value || 'Sekolah';
 
-    const now = new Date();
-    const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const indoDate = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeNow = getTimeStringWIB();                  // HH:MM dalam WIB
+    const indoDate = formatDateIndonesia(targetDate);     // format bahasa Indonesia
 
     let queuedCount = 0;
 
@@ -237,7 +236,7 @@ router.get('/dashboard/attendances/export/excel', isAuthenticated, (req, res) =>
   try {
     const user = req.session.user;
     const { date, status } = req.query;
-    const targetDate = date || new Date().toLocaleDateString('en-CA');
+    const targetDate = date || getTodayWIB();
     let targetClassId = (user.role === 'guru' && user.class_id) ? user.class_id : req.query.class_id;
 
     let query = `
@@ -302,7 +301,7 @@ router.get('/dashboard/attendances/export/excel', isAuthenticated, (req, res) =>
 router.get('/dashboard/attendances/teacher-summary-preview', isAuthenticated, (req, res) => {
   try {
     const user = req.session.user;
-    const today = new Date().toLocaleDateString('en-CA');
+    const today = getTodayWIB();
     const date = req.query.date || today;
     let classId = req.query.class_id;
 

@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../database/db');
 const { isAuthenticated } = require('../middlewares/auth');
 const whatsapp = require('../services/whatsapp');
+const { getTodayWIB } = require('../utils/timeHelper');
 
 // Dashboard Utama
 router.get('/dashboard', isAuthenticated, (req, res) => {
@@ -10,7 +11,7 @@ router.get('/dashboard', isAuthenticated, (req, res) => {
   const isGuru = user.role === 'guru';
   const classFilter = isGuru && user.class_id ? user.class_id : null;
 
-  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const today = getTodayWIB(); // YYYY-MM-DD dalam WIB
 
   // Total Siswa
   let totalStudentsQuery = 'SELECT COUNT(*) as count FROM students WHERE is_active = 1';

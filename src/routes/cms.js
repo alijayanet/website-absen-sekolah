@@ -220,7 +220,7 @@ router.post('/dashboard/cms/announcement', isAuthenticated, isAdmin, (req, res) 
 // 7. Simpan Pengaturan Jam Sekolah & Absensi
 router.post('/dashboard/cms/schedule', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const { hari_aktif, jam_masuk, toleransi_telat, jam_cutoff_alpa, wa_auto_teacher_summary, jam_rekap_guru } = req.body;
+    const { hari_aktif, jam_masuk, toleransi_telat, jam_cutoff_alpa, wa_auto_teacher_summary, jam_rekap_guru, scheduler_timezone } = req.body;
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
     if (hari_aktif !== undefined) upsert.run('hari_aktif', hari_aktif.trim());
@@ -229,6 +229,7 @@ router.post('/dashboard/cms/schedule', isAuthenticated, isAdmin, (req, res) => {
     if (jam_cutoff_alpa) upsert.run('jam_cutoff_alpa', jam_cutoff_alpa.trim());
     upsert.run('wa_auto_teacher_summary', wa_auto_teacher_summary === '1' ? '1' : '0');
     if (jam_rekap_guru) upsert.run('jam_rekap_guru', jam_rekap_guru.trim());
+    if (scheduler_timezone) upsert.run('scheduler_timezone', scheduler_timezone.trim());
 
     res.redirect('/dashboard/cms?success=Jadwal operasional absensi berhasil diperbarui.');
   } catch (err) {

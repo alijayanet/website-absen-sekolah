@@ -1,6 +1,7 @@
 const db = require('../database/db');
 const queue = require('./queue');
 const { generateTeacherSummary } = require('./summary');
+const { getTodayWIB, getTimeStringWIB } = require('../utils/timeHelper');
 
 class SchedulerService {
   constructor() {
@@ -21,6 +22,11 @@ class SchedulerService {
 
   check() {
     try {
+      // Selalu trigger antrean pesan jika ada pesan tertunda di wa_queue
+      try {
+        queue.trigger();
+      } catch (_) {}
+
       // 1. Periksa apakah pengaturan auto-send aktif
       const autoSendSetting = db.prepare("SELECT value FROM settings WHERE key = 'wa_auto_teacher_summary'").get();
       const isAutoSend = autoSendSetting ? autoSendSetting.value === '1' : false;
@@ -32,10 +38,8 @@ class SchedulerService {
       const targetTime = targetTimeSetting?.value || '09:00';
 
       const now = new Date();
-      const currentHours = String(now.getHours()).padStart(2, '0');
-      const currentMinutes = String(now.getMinutes()).padStart(2, '0');
-      const currentTime = `${currentHours}:${currentMinutes}`;
-      const today = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const currentTime = getTimeStringWIB();   // HH:MM dalam WIB
+      const today = getTodayWIB();              // YYYY-MM-DD dalam WIB
 
       // 3. Periksa apakah hari ini sudah pernah dikirim otomatis
       const lastSentSetting = db.prepare("SELECT value FROM settings WHERE key = 'last_auto_teacher_summary_date'").get();

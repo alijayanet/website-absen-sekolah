@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
 const queue = require('../services/queue');
+const { getTodayWIB, getTimeSecondWIB } = require('../utils/timeHelper');
 
 // Halaman Kiosk Scanner Gerbang Sekolah
 router.get('/kiosk', (req, res) => {
@@ -43,13 +44,9 @@ router.post('/api/attendance/scan', (req, res) => {
       });
     }
 
-    // Waktu hari ini
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const timeIn = `${hours}:${minutes}:${seconds}`;
+    // Waktu hari ini dalam WIB
+    const dateStr = getTodayWIB();          // YYYY-MM-DD
+    const timeIn = getTimeSecondWIB();       // HH:MM:SS
 
     // Cek apakah siswa sudah melakukan absensi hari ini
     const existing = db.prepare('SELECT * FROM attendances WHERE student_id = ? AND date = ?').get(student.id, dateStr);
@@ -77,7 +74,8 @@ router.post('/api/attendance/scan', (req, res) => {
     // Konversi jam ke total menit
     const [masukH, masukM] = jamMasukSetting.split(':').map(Number);
     const [toleransiH, toleransiM] = toleransiSetting.split(':').map(Number);
-    const totalMinutesNow = now.getHours() * 60 + now.getMinutes();
+    const [timeH, timeM] = timeIn.split(':').map(Number); // gunakan WIB dari timeIn
+    const totalMinutesNow = timeH * 60 + timeM;
     const totalMinutesMasuk = masukH * 60 + masukM;
     const totalMinutesToleransi = toleransiH * 60 + toleransiM;
 

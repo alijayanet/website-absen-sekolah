@@ -5,7 +5,6 @@ const path = require('path');
 const fs = require('fs');
 const config = require('../config');
 const db = require('../database/db');
-const botService = require('./bot');
 
 const { waLidStore } = require('./waLidStore');
 
@@ -248,131 +247,115 @@ class WhatsAppService {
   }
 
   /**
-   * Pre-resolve seluruh nomor Guru, Admin, dan Wali Murid yang ada di database ke bentuk LID
+   * Pre-resolve nomor Guru dan Admin yang ada di database ke bentuk LID secara aman (tanpa spam onWhatsApp)
    */
-  async preResolveAllLids(targetLidUser = null) {
-    if (!this.sock || this.status !== 'connected') return null;
+  async preResolveTeachersAndAdmins() {
+    if (!this.sock || this.status !== 'connected') return;
 
     try {
       const userRows = db.prepare("SELECT phone FROM users WHERE phone IS NOT NULL AND TRIM(phone) != ''").all();
-      const studentRows = db.prepare("SELECT parent_phone as phone FROM students WHERE parent_phone IS NOT NULL AND TRIM(parent_phone) != ''").all();
-      const allPhones = [...userRows, ...studentRows].map(r => r.phone);
 
-      for (const rawPhone of allPhones) {
-        const clean = String(rawPhone).replace(/\D/g, '');
+      for (const r of userRows) {
+        const clean = String(r.phone).replace(/\D/g, '');
         if (clean.length < 8) continue;
-        const formatted = clean.startsWith('0') ? '62' + clean.slice(1) : clean.startsWith('62') ? clean : '62' + clean;
-        const jid = `${formatted}@s.whatsapp.net`;
+        const formatted = clean.startsWith('0') ? '62' + clean.slice(1) : (clean.startsWith('62') ? clean : '62' + clean);
 
-        const cachedLid = waLidStore.getByPhone(formatted);
-        if (targetLidUser && cachedLid && cachedLid.includes(targetLidUser)) {
-          return formatted;
+        // Jika sudah ada di waLidStore atau authLidReverse, lewati
+        if (this.waLidStore.getByPhone(formatted) || authLidReverse.get(formatted)) {
+          continue;
         }
 
+        const jid = `${formatted}@s.whatsapp.net`;
         try {
-          const waCheck = await this.sock.onWhatsApp(jid);
+          const waCheck = await this.sock.onWhatsApp(jid).catch(() => []);
           if (waCheck && waCheck.length > 0 && waCheck[0].exists && waCheck[0].lid) {
             const lidJid = waCheck[0].lid;
             const lidUser = lidJid.split('@')[0];
-            waLidStore.set(lidJid, formatted);
-            waLidStore.set(lidUser, formatted);
+            this.waLidStore.set(lidJid, formatted);
+            this.waLidStore.set(lidUser, formatted);
             authLidReverse.set(lidJid, formatted);
             authLidReverse.set(lidUser, formatted);
-
-            if (targetLidUser && (lidUser === targetLidUser || lidJid.includes(targetLidUser))) {
-              return formatted;
-            }
+            console.log(`[WhatsApp LID Pre-resolve] Nomor Guru/Admin ${formatted} terpetakan ke LID: ${lidJid}`);
           }
+          await new Promise(res => setTimeout(res, 500));
         } catch (_) {}
       }
     } catch (err) {
-      console.warn('[WhatsApp LID] Gagal pre-resolve nomor:', err.message);
+      console.warn('[WhatsApp LID Pre-resolve] Warning:', err.message);
     }
-
-    return null;
   }
 
   /**
-   * Resolusi nomor telepon pengirim dari JID (Mendukung standar @s.whatsapp.net, senderPn, dan @lid)
+   * Ekstrak nomor HP dari key pesan (Identik dengan implementasi sukses di billing-rtrw-radius)
    */
-  async resolvePhoneNumber(jid, msg = null) {
-    if (!jid) return null;
+  getPhoneFromKey(key) {
+    if (!key) return null;
+    const remoteJid = key.remoteJid || key;
+    if (!remoteJid || typeof remoteJid !== 'string') return null;
 
-    // 1. Jika PNJID standar (@s.whatsapp.net)
-    if (jid.endsWith('@s.whatsapp.net')) {
-      return jid.split('@')[0].replace(/\D/g, '');
-    }
-
-    // 2. Cek apakah ada senderPn di msg.key (fitur Baileys)
-    if (msg?.key?.senderPn && msg.key.senderPn.endsWith('@s.whatsapp.net')) {
-      const p = msg.key.senderPn.split('@')[0].replace(/\D/g, '');
-      waLidStore.set(jid, p);
-      return p;
-    }
-    if (msg?.key?.participantPn && msg.key.participantPn.endsWith('@s.whatsapp.net')) {
-      const p = msg.key.participantPn.split('@')[0].replace(/\D/g, '');
-      waLidStore.set(jid, p);
-      return p;
-    }
-    if (msg?.key?.participant && msg.key.participant.endsWith('@s.whatsapp.net')) {
-      const p = msg.key.participant.split('@')[0].replace(/\D/g, '');
+    // 1. Cek senderPn jika ada (fitur Baileys)
+    if (key.senderPn && key.senderPn.endsWith('@s.whatsapp.net')) {
+      let p = key.senderPn.split('@')[0].replace(/\D/g, '');
+      if (p.startsWith('0')) p = '62' + p.slice(1);
+      else if (p.startsWith('8')) p = '62' + p;
+      else if (!p.startsWith('62')) p = '62' + p;
       return p;
     }
 
-    // 3. Jika JID adalah @lid
-    if (jid.endsWith('@lid') || (msg?.key?.senderLid && msg.key.senderLid.endsWith('@lid'))) {
-      const lidJid = jid.endsWith('@lid') ? jid : msg.key.senderLid;
+    // 2. Cek jika remoteJid atau senderLid adalah @lid
+    if (remoteJid.endsWith('@lid') || (key.senderLid && key.senderLid.endsWith('@lid'))) {
+      const lidJid = remoteJid.endsWith('@lid') ? remoteJid : key.senderLid;
       const lidUser = lidJid.split('@')[0];
 
-      // 3a. Cek authLidReverse
+      // Cek authLidReverse
       const fromAuth = authLidReverse.get(lidJid) || authLidReverse.get(lidUser);
       if (fromAuth) return fromAuth;
 
-      // 3b. Cek waLidStore cache
-      const cached = waLidStore.get(lidJid) || waLidStore.get(lidUser);
-      if (cached) {
-        return cached.replace(/\D/g, '');
-      }
+      // Cek waLidStore
+      try {
+        const mapped = this.waLidStore.get(lidJid) || this.waLidStore.get(lidUser);
+        if (mapped) {
+          let p = String(mapped).replace(/\D/g, '');
+          if (p.startsWith('0')) p = '62' + p.slice(1);
+          else if (p.startsWith('8')) p = '62' + p;
+          else if (!p.startsWith('62')) p = '62' + p;
+          return p;
+        }
+      } catch (_) {}
 
-      // 3c. Cek signalRepository jika ada (Baileys v7)
-      if (this.sock?.signalRepository?.lidMapping?.getPNForLID) {
-        try {
-          const pnjid = await this.sock.signalRepository.lidMapping.getPNForLID(lidJid);
-          if (pnjid && pnjid.endsWith('@s.whatsapp.net')) {
-            const p = pnjid.split('@')[0].replace(/\D/g, '');
-            waLidStore.set(lidJid, p);
-            waLidStore.set(lidUser, p);
-            authLidReverse.set(lidJid, p);
-            authLidReverse.set(lidUser, p);
-            return p;
-          }
-        } catch (e) {}
-      }
-
-      // 3d. Cek kecocokan session di auth folder (remoteIdentityKey)
+      // Cek kecocokan session di auth folder (remoteIdentityKey)
       try {
         const matchPhone = this.findPhoneByLidInAuth(lidUser);
         if (matchPhone) {
-          waLidStore.set(lidJid, matchPhone);
-          waLidStore.set(lidUser, matchPhone);
-          authLidReverse.set(lidJid, matchPhone);
-          authLidReverse.set(lidUser, matchPhone);
-          console.log(`[WhatsApp LID] Ditemukan dari Auth Session: ${lidUser} -> ${matchPhone}`);
-          return matchPhone;
+          let p = matchPhone.startsWith('0') ? '62' + matchPhone.slice(1) : matchPhone;
+          this.waLidStore.set(lidJid, p);
+          this.waLidStore.set(lidUser, p);
+          authLidReverse.set(lidJid, p);
+          authLidReverse.set(lidUser, p);
+          return p;
         }
-      } catch (e) {}
-
-      // 3e. Coba on-demand pre-resolve terhadap seluruh nomor di database
-      try {
-        const found = await this.preResolveAllLids(lidUser);
-        if (found) {
-          return found;
-        }
-      } catch (e) {}
+      } catch (_) {}
     }
 
-    // 4. Fallback: ambil string angka dari JID
-    return jid.split('@')[0].replace(/\D/g, '');
+    // 3. Extract nomor dari JID standar (@s.whatsapp.net)
+    const [user, host] = remoteJid.split('@');
+    if (!user || !host) return null;
+
+    const phone = user.replace(/\D/g, '');
+    if (!phone) return null;
+    if (phone.startsWith('0')) return '62' + phone.slice(1);
+    if (phone.startsWith('8')) return '62' + phone;
+    return phone;
+  }
+
+  /**
+   * Resolusi nomor telepon pengirim dari JID
+   */
+  async resolvePhoneNumber(jid, msg = null) {
+    if (msg && msg.key) {
+      return this.getPhoneFromKey(msg.key);
+    }
+    return this.getPhoneFromKey({ remoteJid: jid });
   }
 
   // Pembersihan manual session/pre-keys usang tanpa hapus creds.json
@@ -390,6 +373,17 @@ class WhatsAppService {
     this.status = 'connecting';
 
     try {
+      if (this.sock) {
+        try {
+          console.log('[WhatsApp] Menutup koneksi socket lama sebelum inisialisasi baru...');
+          this.sock.ev.removeAllListeners();
+          this.sock.end();
+        } catch (e) {
+          console.warn('[WhatsApp] Gagal menutup socket lama:', e.message);
+        }
+        this.sock = null;
+      }
+
       const { state, saveCreds } = await useMultiFileAuthState(config.baileysAuthPath);
       loadAuthLidReverseMap(config.baileysAuthPath);
 
@@ -505,6 +499,14 @@ class WhatsAppService {
           this.qrCodeDataUrl = null;
           this.userJid = null;
 
+          if (this.sock) {
+            try {
+              this.sock.ev.removeAllListeners();
+              this.sock.end();
+            } catch (_) {}
+            this.sock = null;
+          }
+
           // Auto-repair jika terjadi desinkronisasi sesi / Bad MAC
           const isBadMac = errorMsg.includes('Bad MAC') || errorMsg.includes('MAC mismatch') || statusCode === 401;
           if (isBadMac && statusCode !== DisconnectReason.loggedOut) {
@@ -535,23 +537,31 @@ class WhatsAppService {
           this.isInitializing = false;
           console.log(`[WhatsApp] Terkoneksi berhasil sebagai: ${this.userJid}`);
 
-          // Pre-resolve nomor Guru, Admin, dan Orang Tua ke format LID
-          this.preResolveAllLids().catch(err => {
+          // Trigger queue worker agar memproses pesan yang tertunda
+          try {
+            const queueService = require('./queue');
+            queueService.trigger();
+          } catch (_) {}
+
+          // Pre-resolve Guru dan Admin yang belum terpetakan ke LID
+          this.preResolveTeachersAndAdmins().catch(err => {
             console.warn('[WhatsApp LID] Pre-resolve warning:', err.message);
           });
         }
       });
 
       // Tangani Pesan Masuk via Bot Service & Cache ke MessageStore
-      this.sock.ev.on('messages.upsert', async (m) => {
-        if (m.messages) {
-          for (const msg of m.messages) {
-            if (msg.key && msg.message) {
-              this.messageStore.cache(msg.key, msg.message);
-            }
+      this.sock.ev.on('messages.upsert', async ({ messages, type }) => {
+        if (type !== 'notify') return;
+        if (!messages || messages.length === 0) return;
+
+        for (const msg of messages) {
+          if (msg.key && msg.message) {
+            this.messageStore.cache(msg.key, msg.message);
           }
         }
-        await botService.handleMessage(this, m);
+        const botService = require('./bot');
+        await botService.handleMessage(this, { messages, type });
       });
 
     } catch (err) {
@@ -639,13 +649,18 @@ class WhatsAppService {
   }
 
   async reconnect() {
+    console.log('[WhatsApp] Memulai ulang koneksi bot...');
     if (this.sock) {
       try {
+        this.sock.ev.removeAllListeners();
         this.sock.end();
       } catch (e) {}
+      this.sock = null;
     }
     this.isInitializing = false;
-    await this.initWhatsApp();
+    setTimeout(() => {
+      this.initWhatsApp();
+    }, 1000);
   }
 }
 
