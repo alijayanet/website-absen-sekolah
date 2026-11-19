@@ -26,6 +26,9 @@ class QueueService {
   // Trigger antrean agar memproses jika belum berjalan
   trigger() {
     if (this.isProcessing) return;
+    try {
+      db.prepare("UPDATE wa_queue SET status = 'pending' WHERE status = 'sending'").run();
+    } catch (_) {}
     this.processNext();
   }
 

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
 const queue = require('../services/queue');
-const { getTodayWIB, getTimeSecondWIB } = require('../utils/timeHelper');
+const { getTodayWIB, getTimeSecondWIB, getTimeStringWIB, formatDateIndonesia } = require('../utils/timeHelper');
 
 // Halaman Kiosk Scanner Gerbang Sekolah
 router.get('/kiosk', (req, res) => {
@@ -102,8 +102,8 @@ router.post('/api/attendance/scan', (req, res) => {
       let template = templateSetting || 'Siswa {nama_siswa} telah hadir di sekolah pada {jam} ({status}).';
 
       // Format tanggal Indonesia
-      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      const indoDate = now.toLocaleDateString('id-ID', options);
+      const indoDate = formatDateIndonesia(dateStr);
+      const jamStr = timeIn.slice(0, 5); // Format HH:MM WIB
 
       const statusIndo = status === 'HADIR' ? 'Hadir Tepat Waktu' : 'Terlambat';
       const ketTelat = status === 'TERLAMBAT' ? `\n⚠️ *Keterlambatan:* ${lateMinutes} menit` : '';
@@ -112,7 +112,7 @@ router.post('/api/attendance/scan', (req, res) => {
         .replace(/{nama_siswa}/g, student.name)
         .replace(/{kelas}/g, student.class_name || '-')
         .replace(/{tanggal}/g, indoDate)
-        .replace(/{jam}/g, `${hours}:${minutes}`)
+        .replace(/{jam}/g, jamStr)
         .replace(/{status}/g, statusIndo)
         .replace(/{keterangan_telat}/g, ketTelat)
         .replace(/{nama_sekolah}/g, schoolNameSetting);
