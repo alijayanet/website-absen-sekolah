@@ -522,6 +522,31 @@
             </div>
           </div>
 
+          <!-- Pengaturan Presensi Pulang Siswa (Opsional) -->
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                  <i data-lucide="log-out" class="w-4 h-4 text-emerald-600"></i>
+                  Aktifkan Fitur Presensi Pulang (Checkout Siswa - Opsional)
+                </span>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                  Jika diaktifkan, siswa dapat melakukan tap kartu kedua saat jam pulang sekolah. Sistem akan mencatat waktu pulang dan otomatis mengirim notifikasi WhatsApp kepulangan ke orang tua/wali murid.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                <input type="checkbox" name="enable_absen_pulang" value="1" <%= settings.enable_absen_pulang === '1' ? 'checked' : '' %> class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div class="max-w-xs pt-1">
+              <label class="block font-semibold text-slate-700 mb-1">Jam Mulai Buka Absen Pulang (WIB)</label>
+              <input type="time" name="jam_pulang" value="<%= settings.jam_pulang || '14:00' %>" class="w-full p-2 bg-white border border-slate-200 rounded-lg font-mono text-xs">
+              <span class="text-[10px] text-slate-400 mt-1 block">Siswa baru dapat melakukan scan pulang setelah jam ini tercapai (Contoh: 14:00).</span>
+            </div>
+          </div>
+
 
           <div>
             <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm transition">
@@ -558,18 +583,27 @@
               1. Template Notifikasi Presensi Masuk
             </label>
             <textarea name="wa_template_absen" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_absen || '' %></textarea>
+            <span class="text-[10px] text-slate-400 mt-0.5 block">Variabel: {nama_siswa}, {kelas}, {tanggal}, {jam}, {status}, {keterangan_telat}, {nama_sekolah}</span>
           </div>
 
           <div>
             <label class="block font-semibold text-slate-700 mb-1">
-              2. Template Pesan Pengenalan Kontak & Verifikasi "YA"
+              2. Template Notifikasi Presensi Pulang (Jika Fitur Pulang Aktif)
+            </label>
+            <textarea name="wa_template_pulang" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_pulang || '' %></textarea>
+            <span class="text-[10px] text-slate-400 mt-0.5 block">Variabel: {nama_siswa}, {kelas}, {tanggal}, {jam}, {nama_sekolah}</span>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">
+              3. Template Pesan Pengenalan Kontak & Verifikasi "YA"
             </label>
             <textarea name="wa_template_intro" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_intro || '' %></textarea>
           </div>
 
           <div>
             <label class="block font-semibold text-slate-700 mb-1">
-              3. Template Peringatan Siswa Belum Hadir (Alpa)
+              4. Template Peringatan Siswa Belum Hadir (Alpa)
             </label>
             <textarea name="wa_template_alpa" rows="4" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-[11px]"><%= settings.wa_template_alpa || '' %></textarea>
           </div>

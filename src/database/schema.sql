@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS attendances (
   student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   date TEXT NOT NULL, -- Format: YYYY-MM-DD
   time_in TEXT NOT NULL, -- Format: HH:mm:ss
+  time_out TEXT, -- Format: HH:mm:ss (opsional jika fitur absen pulang aktif)
   status TEXT NOT NULL CHECK(status IN ('HADIR', 'TERLAMBAT', 'IZIN', 'SAKIT', 'ALPA')),
   late_minutes INTEGER DEFAULT 0,
   notes TEXT,

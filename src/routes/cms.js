@@ -220,13 +220,19 @@ router.post('/dashboard/cms/announcement', isAuthenticated, isAdmin, (req, res) 
 // 7. Simpan Pengaturan Jam Sekolah & Absensi
 router.post('/dashboard/cms/schedule', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const { hari_aktif, jam_masuk, toleransi_telat, jam_cutoff_alpa, wa_auto_teacher_summary, jam_rekap_guru, scheduler_timezone } = req.body;
+    const {
+      hari_aktif, jam_masuk, toleransi_telat, jam_cutoff_alpa,
+      enable_absen_pulang, jam_pulang,
+      wa_auto_teacher_summary, jam_rekap_guru, scheduler_timezone
+    } = req.body;
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
     if (hari_aktif !== undefined) upsert.run('hari_aktif', hari_aktif.trim());
     if (jam_masuk) upsert.run('jam_masuk', jam_masuk.trim());
     if (toleransi_telat) upsert.run('toleransi_telat', toleransi_telat.trim());
     if (jam_cutoff_alpa) upsert.run('jam_cutoff_alpa', jam_cutoff_alpa.trim());
+    upsert.run('enable_absen_pulang', enable_absen_pulang === '1' ? '1' : '0');
+    if (jam_pulang) upsert.run('jam_pulang', jam_pulang.trim());
     upsert.run('wa_auto_teacher_summary', wa_auto_teacher_summary === '1' ? '1' : '0');
     if (jam_rekap_guru) upsert.run('jam_rekap_guru', jam_rekap_guru.trim());
     if (scheduler_timezone) upsert.run('scheduler_timezone', scheduler_timezone.trim());
@@ -240,11 +246,12 @@ router.post('/dashboard/cms/schedule', isAuthenticated, isAdmin, (req, res) => {
 // 8. Simpan Pengaturan & Template Pesan WhatsApp
 router.post('/dashboard/cms/whatsapp', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const { wa_enabled, wa_template_absen, wa_template_intro, wa_template_alpa } = req.body;
+    const { wa_enabled, wa_template_absen, wa_template_pulang, wa_template_intro, wa_template_alpa } = req.body;
     const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
 
     upsert.run('wa_enabled', wa_enabled === '1' ? '1' : '0');
     if (wa_template_absen) upsert.run('wa_template_absen', wa_template_absen.trim());
+    if (wa_template_pulang) upsert.run('wa_template_pulang', wa_template_pulang.trim());
     if (wa_template_intro) upsert.run('wa_template_intro', wa_template_intro.trim());
     if (wa_template_alpa) upsert.run('wa_template_alpa', wa_template_alpa.trim());
 

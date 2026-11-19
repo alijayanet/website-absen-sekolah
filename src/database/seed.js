@@ -33,12 +33,15 @@ function seedDatabase() {
     ['toleransi_telat', '07:15'],
     ['jam_cutoff_alpa', '07:30'],
     ['hari_aktif', 'Senin – Jumat'],
+    ['enable_absen_pulang', '0'],
+    ['jam_pulang', '14:00'],
     ['wa_auto_teacher_summary', '0'],
     ['jam_rekap_guru', '09:00'],
     ['scheduler_timezone', 'Asia/Jakarta'],
     ['last_auto_teacher_summary_date', ''],
     ['wa_enabled', '1'],
     ['wa_template_absen', 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nDiberitahukan bahwa ananda telah melakukan absensi di sekolah:\n📅 Tanggal: {tanggal}\n⏰ Pukul: {jam} WIB\n📌 Status: *{status}*{keterangan_telat}\n\nTerima kasih atas kerja samanya.\n_Sistem Absensi {nama_sekolah}_'],
+    ['wa_template_pulang', 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nDiberitahukan bahwa ananda telah selesai kegiatan belajar dan melakukan absensi PULANG dari sekolah:\n📅 Tanggal: {tanggal}\n⏰ Pukul: {jam} WIB\n📌 Status: *Sudah Pulang Sekolah*\n\nTerima kasih atas kerja samanya.\n_Sistem Absensi {nama_sekolah}_'],
     ['wa_template_intro', 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nIni adalah nomor layanan resmi bot absensi & informasi kehadiran dari *{nama_sekolah}*.\n\n⚠️ *MOHON LAKUKAN LANGKAH BERIKUT:*\n1. *SIMPAN NOMOR INI* di kontak HP Anda (beri nama: *Absensi {nama_sekolah}*).\n2. *BALAS PESAN INI* dengan mengetik kata *YA* agar nomor Anda terverifikasi di sistem kami dan laporan kehadiran harian ananda dapat otomatis terkirim.\n\nTerima kasih atas kerja samanya.\nWassalamu’alaikum Wr. Wb.'],
     ['wa_template_alpa', 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nHingga pukul {jam} WIB hari ini ({tanggal}), ananda *belum tercatat melakukan absensi masuk* di sekolah (Status: *ALPA / Belum Hadir*).\n\nApabila ananda berhalangan hadir dikarenakan sakit atau izin keluarga, mohon segera konfirmasi kepada Wali Kelas.\n\nTerima kasih.\n_Sistem Absensi {nama_sekolah}_']
   ];

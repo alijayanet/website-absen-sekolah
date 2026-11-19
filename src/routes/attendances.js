@@ -240,7 +240,7 @@ router.get('/dashboard/attendances/export/excel', isAuthenticated, (req, res) =>
     let targetClassId = (user.role === 'guru' && user.class_id) ? user.class_id : req.query.class_id;
 
     let query = `
-      SELECT a.date, a.time_in, a.status, a.late_minutes, a.notes, a.created_by,
+      SELECT a.date, a.time_in, a.time_out, a.status, a.late_minutes, a.notes, a.created_by,
              s.nis, s.nisn, s.name as student_name, c.name as class_name, s.parent_phone
       FROM attendances a
       JOIN students s ON a.student_id = s.id
@@ -272,6 +272,7 @@ router.get('/dashboard/attendances/export/excel', isAuthenticated, (req, res) =>
     const worksheet = XLSX.utils.json_to_sheet(records.map(r => ({
       'Tanggal': r.date,
       'Jam Masuk': r.time_in,
+      'Jam Pulang': r.time_out || '-',
       'Status': r.status,
       'Keterlambatan (Menit)': r.late_minutes || 0,
       'Catatan': r.notes || '',

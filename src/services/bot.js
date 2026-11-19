@@ -134,6 +134,10 @@ class BotService {
       } else {
         todayStatusText = `❌ *Alpa / Tidak Hadir*`;
       }
+
+      if (todayAtt.time_out) {
+        todayStatusText += `\n🚪 *Jam Pulang:* ${todayAtt.time_out.slice(0, 5)} WIB`;
+      }
     }
 
     // 2. Rekapitulasi Bulan Berjalan (dalam WIB)

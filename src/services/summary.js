@@ -74,7 +74,8 @@ function generateTeacherSummary(classId, date) {
       if (a.status === 'TERLAMBAT') {
         statusDesc = a.late_minutes ? `Terlambat ${a.late_minutes} mnt` : 'Terlambat';
       }
-      message += `${idx + 1}. ${a.student_name} (${time} WIB - ${statusDesc})\n`;
+      const outInfo = a.time_out ? ` | Pulang: ${a.time_out.slice(0, 5)}` : '';
+      message += `${idx + 1}. ${a.student_name} (${time} WIB - ${statusDesc}${outInfo})\n`;
     });
   }
 

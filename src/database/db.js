@@ -35,6 +35,13 @@ try {
   // Kolom sudah ada
 }
 
+// Migrasi skema: Tambah kolom time_out pada attendances jika belum ada (opsional Absen Pulang)
+try {
+  db.prepare('ALTER TABLE attendances ADD COLUMN time_out TEXT').run();
+} catch (e) {
+  // Kolom sudah ada
+}
+
 // Migrasi skema: Tambah kolom frequency pada fee_categories jika belum ada
 try {
   db.prepare("ALTER TABLE fee_categories ADD COLUMN frequency TEXT DEFAULT 'ONCE'").run();
@@ -110,7 +117,10 @@ const defaultSettings = [
   { key: 'card_issue_city', value: 'Cirebon' },
   { key: 'card_issue_date', value: '15 Juli 2026' },
   { key: 'school_principal_signature', value: '' },
-  { key: 'school_principal_stamp', value: '' }
+  { key: 'school_principal_stamp', value: '' },
+  { key: 'enable_absen_pulang', value: '0' },
+  { key: 'jam_pulang', value: '14:00' },
+  { key: 'wa_template_pulang', value: 'Assalamu’alaikum Wr. Wb.\nYth. Bapak/Ibu Wali Murid dari *{nama_siswa}* (Kelas {kelas}),\n\nDiberitahukan bahwa ananda telah selesai kegiatan belajar dan melakukan absensi PULANG dari sekolah:\n📅 Tanggal: {tanggal}\n⏰ Pukul: {jam} WIB\n📌 Status: *Sudah Pulang Sekolah*\n\nTerima kasih atas kerja samanya.\n_Sistem Absensi {nama_sekolah}_' }
 ];
 
 const checkSetting = db.prepare('SELECT value FROM settings WHERE key = ?');

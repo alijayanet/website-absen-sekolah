@@ -90,6 +90,12 @@
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
         <span>Batas Masuk: <strong class="text-white font-mono"><%= settings.toleransi_telat || '07:15' %></strong></span>
       </div>
+      <% if (settings.enable_absen_pulang === '1') { %>
+      <div class="hidden sm:flex items-center gap-2 bg-slate-700/60 px-3 py-1.5 rounded-lg border border-slate-600 text-xs text-slate-300">
+        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+        <span>Jam Pulang: <strong class="text-white font-mono"><%= settings.jam_pulang || '14:00' %></strong></span>
+      </div>
+      <% } %>
       <a href="/dashboard" class="p-1.5 sm:p-2 rounded-lg bg-slate-700/60 hover:bg-slate-600 text-slate-300 transition" title="Kembali ke Dashboard">
         <i data-lucide="layout-dashboard" class="w-4 h-4 sm:w-5 sm:h-5"></i>
       </a>
@@ -751,7 +757,9 @@
         showResultModal(data);
 
         if (data.success && data.student) {
-          addRecentScan(data.student, data.status, data.timeIn);
+          const displayTime = data.type === 'OUT' ? data.timeOut : data.timeIn;
+          const displayStatus = data.type === 'OUT' ? 'PULANG' : data.status;
+          addRecentScan(data.student, displayStatus, displayTime);
         }
 
       } catch (err) {
@@ -807,9 +815,21 @@
           resBadge.innerText = `⚠ TERLAMBAT (${data.lateMinutes} MENIT)`;
           playSound('WARNING');
         }
+      } else if (data.code === 'SUCCESS_CHECKOUT') {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40';
+        resBadge.innerText = '✓ ABSEN PULANG BERHASIL';
+        playSound('SUCCESS');
+      } else if (data.code === 'ALREADY_CHECKED_OUT') {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-indigo-500/20 text-indigo-400 border border-indigo-500/40';
+        resBadge.innerText = 'ℹ SUDAH ABSEN PULANG';
+        playSound('WARNING');
+      } else if (data.code === 'TOO_EARLY_FOR_CHECKOUT') {
+        resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-amber-500/20 text-amber-400 border border-amber-500/40';
+        resBadge.innerText = '⏳ BELUM JAM PULANG';
+        playSound('WARNING');
       } else if (data.code === 'ALREADY_ATTENDED') {
         resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-blue-500/20 text-blue-400 border border-blue-500/40';
-        resBadge.innerText = 'ℹ SUDAH ABSEN HARI INI';
+        resBadge.innerText = 'ℹ SUDAH ABSEN MASUK';
         playSound('WARNING');
       } else {
         resBadge.className = 'inline-flex items-center gap-2 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 bg-rose-500/20 text-rose-400 border border-rose-500/40';
@@ -849,7 +869,7 @@
           <div class="text-right">
             <span class="font-mono text-[11px] text-slate-300 font-semibold">${item.timeIn}</span>
             <div>
-              <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded ${item.status === 'HADIR' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">
+              <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded ${item.status === 'HADIR' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : (item.status === 'PULANG' ? 'bg-cyan-950 text-cyan-400 border border-cyan-800' : 'bg-amber-950 text-amber-400 border border-amber-800')}">
                 ${item.status}
               </span>
             </div>

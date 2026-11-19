@@ -422,6 +422,9 @@
                 <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                   <th class="px-6 py-3">Tanggal</th>
                   <th class="px-6 py-3">Jam Masuk</th>
+                  <% if (settings.enable_absen_pulang === '1') { %>
+                    <th class="px-6 py-3">Jam Pulang</th>
+                  <% } %>
                   <th class="px-6 py-3">Status</th>
                   <th class="px-6 py-3">Keterangan</th>
                 </tr>
@@ -429,7 +432,7 @@
               <tbody class="divide-y divide-slate-100">
                 <% if (recentAttendances.length === 0) { %>
                   <tr>
-                    <td colspan="4" class="px-6 py-6 text-center text-slate-400">Belum ada rekaman presensi bulan ini.</td>
+                    <td colspan="<%= settings.enable_absen_pulang === '1' ? 5 : 4 %>" class="px-6 py-6 text-center text-slate-400">Belum ada rekaman presensi bulan ini.</td>
                   </tr>
                 <% } %>
                 <% recentAttendances.forEach(att => { %>
@@ -440,6 +443,11 @@
                     <td class="px-6 py-3 font-mono text-slate-600 whitespace-nowrap">
                       <%= att.time_in %> WIB
                     </td>
+                    <% if (settings.enable_absen_pulang === '1') { %>
+                      <td class="px-6 py-3 font-mono text-slate-600 whitespace-nowrap">
+                        <%= att.time_out ? att.time_out + ' WIB' : '-' %>
+                      </td>
+                    <% } %>
                     <td class="px-6 py-3 whitespace-nowrap">
                       <% if (att.status === 'HADIR') { %>
                         <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">

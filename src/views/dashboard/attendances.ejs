@@ -156,6 +156,9 @@
                 <th class="px-4 py-3">Siswa</th>
                 <th class="px-4 py-3">Kelas</th>
                 <th class="px-4 py-3">Waktu Masuk</th>
+                <% if (settings.enable_absen_pulang === '1') { %>
+                  <th class="px-4 py-3">Waktu Pulang</th>
+                <% } %>
                 <th class="px-4 py-3">Status</th>
                 <th class="px-4 py-3">Keterlambatan</th>
                 <th class="px-4 py-3">Catatan / Surat</th>
@@ -166,7 +169,7 @@
             <tbody class="divide-y divide-slate-100">
               <% if (attendances.length === 0) { %>
                 <tr>
-                  <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+                  <td colspan="<%= settings.enable_absen_pulang === '1' ? 9 : 8 %>" class="px-4 py-8 text-center text-slate-400">
                     Belum ada data presensi pada tanggal dan filter yang dipilih.
                   </td>
                 </tr>
@@ -192,6 +195,15 @@
                   <td class="px-4 py-3 font-mono text-slate-600">
                     <%= a.time_in %> WIB
                   </td>
+                  <% if (settings.enable_absen_pulang === '1') { %>
+                    <td class="px-4 py-3 font-mono text-slate-600">
+                      <% if (a.time_out) { %>
+                        <span class="text-cyan-700 font-bold"><%= a.time_out %> WIB</span>
+                      <% } else { %>
+                        <span class="text-slate-400 italic">Belum Pulang</span>
+                      <% } %>
+                    </td>
+                  <% } %>
                   <td class="px-4 py-3">
                     <% if (a.status === 'HADIR') { %>
                       <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
